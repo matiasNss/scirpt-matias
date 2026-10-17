@@ -1,0 +1,150 @@
+-- ==========================================
+-- LIBRERÍA BÁSICA PARA MUSCLE LEGENDS (ROBLOX)
+-- ==========================================
+
+local MuscleLibrary = {}
+
+-- Servicios de Roblox
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+
+local LocalPlayer = Players.LocalPlayer
+
+-- Estados de los loops (para poder encenderlos y apagarlos)
+MuscleLibrary.Flags = {
+    AutoLift = false,
+    AutoPunch = false,
+    AutoSpeed = false,
+    AutoHandstands = false,
+    AutoGems = false,
+    AutoCrystals = false
+}
+
+-- Función auxiliar para obtener la herramienta activa o equipar un objeto específico
+local function getTool(toolName)
+    local character = LocalPlayer.Character
+    if not character then return nil end
+    
+    -- Buscar en el personaje
+    local tool = character:FindFirstChild(toolName)
+    if tool then return tool end
+    
+    -- Buscar en la mochila
+    local backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
+    if backpack then
+        tool = backpack:FindFirstChild(toolName)
+        if tool then
+            tool.Parent = character
+            return tool
+        end
+    end
+    return nil
+end
+
+-- ==========================================
+-- FUNCIONES PRINCIPALES
+-- ==========================================
+
+-- 1. Auto Entrenar Fuerza (Weights / Mancuernas)
+function MuscleLibrary.ToggleAutoLift(state, weightName)
+    MuscleLibrary.Flags.AutoLift = state
+    weightName = weightName or "Weight" -- Nombre predeterminado del peso
+    
+    task.spawn(function()
+        while MuscleLibrary.Flags.AutoLift do
+            local tool = getTool(weightName)
+            if tool then
+                tool:Activate()
+            end
+            task.wait(0.1)
+        end
+    end)
+end
+
+-- 2. Auto Entrenar Durabilidad / Pelear (Punch / Golpear)
+function MuscleLibrary.ToggleAutoPunch(state)
+    MuscleLibrary.Flags.AutoPunch = state
+    
+    task.spawn(function()
+        while MuscleLibrary.Flags.AutoPunch do
+            local tool = getTool("Punch") or getTool("Super Punch")
+            if tool then
+                tool:Activate()
+            end
+            task.wait(0.1)
+        end
+    end)
+end
+
+-- 3. Auto Entrenar Velocidad (Treadmill / Caminadora)
+function MuscleLibrary.ToggleAutoSpeed(state)
+    MuscleLibrary.Flags.AutoSpeed = state
+    
+    task.spawn(function()
+        while MuscleLibrary.Flags.AutoSpeed do
+            local tool = getTool("Treadmill")
+            if tool then
+                tool:Activate()
+            end
+            task.wait(0.1)
+        end
+    end)
+end
+
+-- 4. Auto Entrenar Agilidad (Handstands / Pino)
+function MuscleLibrary.ToggleAutoHandstands(state)
+    MuscleLibrary.Flags.AutoHandstands = state
+    
+    task.spawn(function()
+        while MuscleLibrary.Flags.AutoHandstands do
+            local tool = getTool("Handstands")
+            if tool then
+                tool:Activate()
+            end
+            task.wait(0.1)
+        end
+    end)
+end
+
+-- 5. Auto Recolectar Gemas del mapa
+function MuscleLibrary.ToggleAutoGems(state)
+    MuscleLibrary.Flags.AutoGems = state
+    
+    task.spawn(function()
+        while MuscleLibrary.Flags.AutoGems do
+            local character = LocalPlayer.Character
+            local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+            
+            if rootPart then
+                -- Buscar carpetas comunes de gemas en Muscle Legends
+                local gemsFolder = Workspace:FindFirstChild("Gems") or Workspace:FindFirstChild("Pickups")
+                if gemsFolder then
+                    for _, gem in ipairs(gemsFolder:GetChildren()) do
+                        if gem:IsA("BasePart") or gem:IsA("Model") then
+                            local part = gem:IsA("Model") and gem.PrimaryPart or gem
+                            if part then
+                                -- Teletransportarse brevemente a la gema para recogerla
+                                rootPart.CFrame = part.CFrame
+                                task.wait(0.05)
+                            end
+                        end
+                    end
+                end
+            end
+            task.wait(1)
+        end
+    end)
+end
+
+-- 6. Función de Utilidad: Teletransporte a zonas o áreas (ej. Gym principal, leyendas, etc.)
+function MuscleLibrary.TeleportTo(position)
+    local character = LocalPlayer.Character
+    local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+    if rootPart and typeof(position) == "CFrame" then
+        rootPart.CFrame = position
+    end
+end
+
+return MuscleLibrary
