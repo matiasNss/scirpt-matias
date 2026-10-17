@@ -1,150 +1,642 @@
--- ==========================================
--- LIBRERÍA BÁSICA PARA MUSCLE LEGENDS (ROBLOX)
--- ==========================================
+Aquí tienes el **código completo, limpio y corregido** listo para ejecutarse en Xeno.
 
-local MuscleLibrary = {}
+Se corrigió la sintaxis del enlace de tu librería (`loadstring`), se limpiaron todas las comillas y caracteres extraños, y se estructuró de forma ordenada para que cargue sin bloqueos ni errores:
 
--- Servicios de Roblox
-local Players = game:GetService("Players")
-local Workspace = game:GetService("Workspace")
+```lua
+-- ========================================================
+-- SCRIPT COMPLETO - MATIAS (ADAPTADO PARA XENO)
+-- ========================================================
+
+if not game:IsLoaded() then
+    game.Loaded:Wait()
+end
+
+-- Carga segura de tu librería desde GitHub
+local success, library = pcall(function()
+    return loadstring(game:HttpGet("https://raw.githubusercontent.com/matiasNss/scirpt-matias/refs/heads/main/scirpt%20matias"))()
+end)
+
+if not success or not library then
+    warn("Error al cargar la librería externa. Revisa el enlace o el repositorio.")
+    return
+end
+
+local player = game.Players.LocalPlayer
+local displayName = player.DisplayName or player.Name
+
+local window = library:AddWindow("script new| Bienvenid@ " .. displayName, {
+    main_color = Color3.fromRGB(255, 0, 0),
+    min_size = Vector2.new(480, 1200),
+    can_resize = false,
+})
+
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
+local Stats = game:GetService("Stats")
+local Lighting = game:GetService("Lighting")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+local Workspace = game:GetService("Workspace")
+local StarterGui = game:GetService("StarterGui")
 
 local LocalPlayer = Players.LocalPlayer
 
--- Estados de los loops (para poder encenderlos y apagarlos)
-MuscleLibrary.Flags = {
-    AutoLift = false,
-    AutoPunch = false,
-    AutoSpeed = false,
-    AutoHandstands = false,
-    AutoGems = false,
-    AutoCrystals = false
-}
+-- ========================================================
+-- FUNCIONES AUXILIARES DE FORMATO
+-- ========================================================
+local function FormatNumber(value)
+    local suffixes = {"", "K", "M", "B", "T", "Qa", "Qi"}
+    local index = 1
+    while value >= 1000 and index < #suffixes do
+        value = value / 1000
+        index = index + 1
+    end
+    return string.format("%.2f%s", value, suffixes[index])
+end
 
--- Función auxiliar para obtener la herramienta activa o equipar un objeto específico
-local function getTool(toolName)
-    local character = LocalPlayer.Character
-    if not character then return nil end
-    
-    -- Buscar en el personaje
-    local tool = character:FindFirstChild(toolName)
-    if tool then return tool end
-    
-    -- Buscar en la mochila
-    local backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
-    if backpack then
-        tool = backpack:FindFirstChild(toolName)
-        if tool then
-            tool.Parent = character
-            return tool
+local function FormatNumberWithCommas(value)
+    local formatted = tostring(value):reverse():gsub("(%d%d%d)", "%1,"):reverse()
+    return formatted:gsub("^,", "")
+end
+
+-- ========================================================
+-- HP BILLBOARD (BARRA DE VIDA EN CABEZAS)
+-- ========================================================
+task.spawn(function()
+    task.wait(1)
+
+    local suffixes = {
+        {"Qi", 1e18},
+        {"Qa", 1e15},
+        {"T",  1e12},
+        {"B",  1e9},
+        {"M",  1e6},
+        {"K",  1e3},
+    }
+
+    local function formatNumber(n)
+        for _, s in ipairs(suffixes) do
+            local name, val = s[1], s[2]
+            if n >= val then
+                return string.format("%.2f%s", n / val, name)
+            end
+        end
+        return tostring(math.floor(n))
+    end
+
+    local function createBillboard(humanoid, character)
+        if not character:FindFirstChild("Head") then return end
+
+        local old = character:FindFirstChild("HP_BILLBOARD")
+        if old then old:Destroy() end
+
+        local billboard = Instance.new("BillboardGui")
+        billboard.Name = "HP_BILLBOARD"
+        billboard.Size = UDim2.new(6, 0, 1.2, 0)
+        billboard.StudsOffset = Vector3.new(0, 3.5, 0)
+        billboard.AlwaysOnTop = true
+        billboard.MaxDistance = 200
+        billboard.Parent = character.Head
+
+        local frame = Instance.new("Frame")
+        frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+        frame.BackgroundTransparency = 0.3
+        frame.Size = UDim2.new(1, 0, 1, 0)
+        frame.BorderSizePixel = 0
+        frame.Parent = billboard
+
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(0, 8)
+        corner.Parent = frame
+
+        local bar = Instance.new("Frame")
+        bar.BackgroundColor3 = Color3.fromRGB(255, 70, 70)
+        bar.Size = UDim2.new(1, 0, 1, 0)
+        bar.BorderSizePixel = 0
+        bar.Parent = frame
+
+        local gradient = Instance.new("UIGradient")
+        gradient.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 0, 0))
+        })
+        gradient.Parent = bar
+
+        local stroke = Instance.new("UIStroke")
+        stroke.Thickness = 2
+        stroke.Color = Color3.fromRGB(0, 0, 0)
+        stroke.Transparency = 0.7
+        stroke.Parent = bar
+
+        local label = Instance.new("TextLabel")
+        label.BackgroundTransparency = 1
+        label.Size = UDim2.new(1, 0, 1, 0)
+        label.TextColor3 = Color3.new(1, 1, 1)
+        label.Font = Enum.Font.GothamBold
+        label.TextSize = 18
+        label.TextStrokeTransparency = 0.5
+        label.Parent = frame
+
+        local function updateHP()
+            if humanoid and humanoid.Parent then
+                local hp = humanoid.Health
+                local max = humanoid.MaxHealth
+                bar.Size = UDim2.new(hp / max, 0, 1, 0)
+                label.Text = formatNumber(hp) .. " / " .. formatNumber(max)
+            end
+        end
+
+        humanoid.HealthChanged:Connect(updateHP)
+        updateHP()
+    end
+
+    local function onCharacterAdded(character)
+        local humanoid = character:WaitForChild("Humanoid")
+        createBillboard(humanoid, character)
+    end
+
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr.Character then
+            onCharacterAdded(plr.Character)
+        end
+        plr.CharacterAdded:Connect(onCharacterAdded)
+    end
+
+    Players.PlayerAdded:Connect(function(plr)
+        plr.CharacterAdded:Connect(onCharacterAdded)
+    end)
+end)
+
+-- ========================================================
+-- PESTAÑA: PRINCIPAL
+-- ========================================================
+local MainTab = window:AddTab("Principal")
+MainTab:AddLabel("Important:").TextSize = 22
+
+MainTab:AddSwitch("Anti Fling", function(bool)
+    local character = Workspace:FindFirstChild(LocalPlayer.Name)
+    if bool and character then
+        local rootPart = character:FindFirstChild("HumanoidRootPart")
+        if rootPart and not rootPart:FindFirstChild("BodyVelocity") then
+            local bodyVelocity = Instance.new("BodyVelocity")
+            bodyVelocity.MaxForce = Vector3.new(100000, 0, 100000)
+            bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+            bodyVelocity.P = 1250
+            bodyVelocity.Parent = rootPart
+        end
+    else
+        if character then
+            local rootPart = character:FindFirstChild("HumanoidRootPart")
+            if rootPart then
+                local existingVelocity = rootPart:FindFirstChild("BodyVelocity")
+                if existingVelocity then existingVelocity:Destroy() end
+            end
         end
     end
-    return nil
-end
+end)
 
--- ==========================================
--- FUNCIONES PRINCIPALES
--- ==========================================
+local lockConnection
+MainTab:AddSwitch("Lock Position", function(Value)
+    if Value then
+        lockConnection = game:GetService("RunService").Heartbeat:Connect(function()
+            local char = LocalPlayer.Character
+            if not char or not char:FindFirstChild("HumanoidRootPart") or not char:FindFirstChildOfClass("Humanoid") then return end
 
--- 1. Auto Entrenar Fuerza (Weights / Mancuernas)
-function MuscleLibrary.ToggleAutoLift(state, weightName)
-    MuscleLibrary.Flags.AutoLift = state
-    weightName = weightName or "Weight" -- Nombre predeterminado del peso
-    
-    task.spawn(function()
-        while MuscleLibrary.Flags.AutoLift do
-            local tool = getTool(weightName)
-            if tool then
-                tool:Activate()
+            local hrp = char.HumanoidRootPart
+            local humanoid = char:FindFirstChildOfClass("Humanoid")
+
+            if not humanoid:FindFirstChild("LockState") then
+                humanoid.WalkSpeed = 0
+                humanoid.JumpPower = 0
+                humanoid.AutoRotate = false
+                humanoid:ChangeState(Enum.HumanoidStateType.Physics)
+                local marker = Instance.new("BoolValue", humanoid)
+                marker.Name = "LockState"
+                marker.Value = true
+                humanoid:SetAttribute("LockCFrame", hrp.CFrame)
             end
-            task.wait(0.1)
-        end
-    end)
-end
 
--- 2. Auto Entrenar Durabilidad / Pelear (Punch / Golpear)
-function MuscleLibrary.ToggleAutoPunch(state)
-    MuscleLibrary.Flags.AutoPunch = state
-    
-    task.spawn(function()
-        while MuscleLibrary.Flags.AutoPunch do
-            local tool = getTool("Punch") or getTool("Super Punch")
-            if tool then
-                tool:Activate()
+            local savedCFrame = humanoid:GetAttribute("LockCFrame")
+            if savedCFrame then
+                hrp.Velocity = Vector3.zero
+                hrp.RotVelocity = Vector3.zero
+                hrp.CFrame = savedCFrame
             end
-            task.wait(0.1)
+        end)
+    else
+        if lockConnection then
+            lockConnection:Disconnect()
+            lockConnection = nil
         end
-    end)
-end
-
--- 3. Auto Entrenar Velocidad (Treadmill / Caminadora)
-function MuscleLibrary.ToggleAutoSpeed(state)
-    MuscleLibrary.Flags.AutoSpeed = state
-    
-    task.spawn(function()
-        while MuscleLibrary.Flags.AutoSpeed do
-            local tool = getTool("Treadmill")
-            if tool then
-                tool:Activate()
-            end
-            task.wait(0.1)
-        end
-    end)
-end
-
--- 4. Auto Entrenar Agilidad (Handstands / Pino)
-function MuscleLibrary.ToggleAutoHandstands(state)
-    MuscleLibrary.Flags.AutoHandstands = state
-    
-    task.spawn(function()
-        while MuscleLibrary.Flags.AutoHandstands do
-            local tool = getTool("Handstands")
-            if tool then
-                tool:Activate()
-            end
-            task.wait(0.1)
-        end
-    end)
-end
-
--- 5. Auto Recolectar Gemas del mapa
-function MuscleLibrary.ToggleAutoGems(state)
-    MuscleLibrary.Flags.AutoGems = state
-    
-    task.spawn(function()
-        while MuscleLibrary.Flags.AutoGems do
-            local character = LocalPlayer.Character
-            local rootPart = character and character:FindFirstChild("HumanoidRootPart")
-            
-            if rootPart then
-                -- Buscar carpetas comunes de gemas en Muscle Legends
-                local gemsFolder = Workspace:FindFirstChild("Gems") or Workspace:FindFirstChild("Pickups")
-                if gemsFolder then
-                    for _, gem in ipairs(gemsFolder:GetChildren()) do
-                        if gem:IsA("BasePart") or gem:IsA("Model") then
-                            local part = gem:IsA("Model") and gem.PrimaryPart or gem
-                            if part then
-                                -- Teletransportarse brevemente a la gema para recogerla
-                                rootPart.CFrame = part.CFrame
-                                task.wait(0.05)
-                            end
-                        end
-                    end
+        local char = LocalPlayer.Character
+        if char then
+            local humanoid = char:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                humanoid.WalkSpeed = 250
+                humanoid.JumpPower = 50
+                humanoid.AutoRotate = true
+                humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+                if humanoid:FindFirstChild("LockState") then
+                    humanoid.LockState:Destroy()
                 end
+                humanoid:SetAttribute("LockCFrame", nil)
             end
+        end
+    end
+end):Set(false)
+
+MainTab:AddSwitch("Show Pets", function(bool)
+    if LocalPlayer:FindFirstChild("hidePets") then
+        LocalPlayer.hidePets.Value = bool
+    end
+end):Set(false)
+
+MainTab:AddSwitch("Show Other Pets", function(bool)
+    if LocalPlayer:FindFirstChild("showOtherPetsOn") then
+        LocalPlayer.showOtherPetsOn.Value = bool
+    end
+end):Set(false)
+
+MainTab:AddLabel("Misc:").TextSize = 22
+
+MainTab:AddSwitch("Infinite Jump", function(bool)
+    _G.InfiniteJump = bool
+    if bool then
+        local InfiniteJumpConnection
+        InfiniteJumpConnection = game:GetService("UserInputService").JumpRequest:Connect(function()
+            if _G.InfiniteJump then
+                LocalPlayer.Character:FindFirstChildOfClass("Humanoid"):ChangeState("Jumping")
+            else
+                InfiniteJumpConnection:Disconnect()
+            end
+        end)
+    end
+end)
+
+-- Walk on Water Parts
+local parts = {}
+local partSize = 2048
+local totalDistance = 50000
+local startPosition = Vector3.new(-2, -9.5, -2)
+
+local function createAllParts()
+    local numberOfParts = math.ceil(totalDistance / partSize)
+    for x = 0, numberOfParts - 1 do
+        for z = 0, numberOfParts - 1 do
+            local function createPart(pos, name)
+                local part = Instance.new("Part")
+                part.Size = Vector3.new(partSize, 1, partSize)
+                part.Position = pos
+                part.Anchored = true
+                part.Transparency = 1
+                part.CanCollide = true
+                part.Name = name
+                part.Parent = Workspace
+                return part
+            end
+
+            table.insert(parts, createPart(startPosition + Vector3.new(x * partSize, 0, z * partSize), "Part_Side_" .. x .. "_" .. z))
+            table.insert(parts, createPart(startPosition + Vector3.new(-x * partSize, 0, z * partSize), "Part_LeftRight_" .. x .. "_" .. z))
+            table.insert(parts, createPart(startPosition + Vector3.new(-x * partSize, 0, -z * partSize), "Part_UpLeft_" .. x .. "_" .. z))
+            table.insert(parts, createPart(startPosition + Vector3.new(x * partSize, 0, -z * partSize), "Part_UpRight_" .. x .. "_" .. z))
+        end
+    end
+end
+task.spawn(createAllParts)
+
+MainTab:AddSwitch("Anti AFK", function(state)
+    if state then
+        if getgenv().AntiAfkExecuted and game.CoreGui:FindFirstChild("thisoneissocoldww") then 
+            getgenv().AntiAfkExecuted = false
+            getgenv().zamanbaslaticisi = false
+            game.CoreGui.thisoneissocoldww:Destroy()
+        end
+        getgenv().AntiAfkExecuted = true
+
+        local thisoneissocoldww = Instance.new("ScreenGui")
+        local madebybloodofbatus = Instance.new("Frame")
+        local UICornerw = Instance.new("UICorner")
+        local DestroyButton = Instance.new("TextButton")
+        local uselesslabelone = Instance.new("TextLabel")
+        local timerlabel = Instance.new("TextLabel")
+        local uselesslabeltwo = Instance.new("TextLabel")
+        local fpslabel = Instance.new("TextLabel")
+        local uselesslabelthree = Instance.new("TextLabel")
+        local pinglabel = Instance.new("TextLabel")
+        local uselessframeone = Instance.new("Frame")
+        local UICornerww = Instance.new("UICorner")
+        local uselesslabelfour = Instance.new("TextLabel")
+
+        thisoneissocoldww.Name = "thisoneissocoldww"
+        thisoneissocoldww.Parent = game.CoreGui
+
+        madebybloodofbatus.Name = "madebybloodofbatus"
+        madebybloodofbatus.Parent = thisoneissocoldww
+        madebybloodofbatus.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+        madebybloodofbatus.Position = UDim2.new(0.085,0,0.13,0)
+        madebybloodofbatus.Size = UDim2.new(0,225,0,96)
+        UICornerw.Parent = madebybloodofbatus
+
+        DestroyButton.Name = "DestroyButton"
+        DestroyButton.Parent = madebybloodofbatus
+        DestroyButton.BackgroundTransparency = 1
+        DestroyButton.Position = UDim2.new(0.87,0,0.02,0)
+        DestroyButton.Size = UDim2.new(0,27,0,15)
+        DestroyButton.Text = "X"
+        DestroyButton.TextColor3 = Color3.fromRGB(255,255,255)
+        DestroyButton.TextSize = 14
+        DestroyButton.MouseButton1Click:Connect(function()
+            getgenv().AntiAfkExecuted = false
+            task.wait(0.1)
+            thisoneissocoldww:Destroy()
+        end)
+
+        uselesslabelone.Parent = madebybloodofbatus
+        uselesslabelone.BackgroundTransparency = 1
+        uselesslabelone.Position = UDim2.new(0.3,0,0,0)
+        uselesslabelone.Size = UDim2.new(0,95,0,24)
+        uselesslabelone.Text = "Anti Afk"
+        uselesslabelone.TextColor3 = Color3.fromRGB(255,255,255)
+        uselesslabelone.TextSize = 14
+
+        timerlabel.Parent = madebybloodofbatus
+        timerlabel.BackgroundTransparency = 1
+        timerlabel.Position = UDim2.new(0.65,0,0.68,0)
+        timerlabel.Size = UDim2.new(0,60,0,24)
+        timerlabel.Text = "0:0:0"
+        timerlabel.TextColor3 = Color3.fromRGB(255,255,255)
+        timerlabel.TextSize = 14
+
+        uselesslabeltwo.Parent = madebybloodofbatus
+        uselesslabeltwo.BackgroundTransparency = 1
+        uselesslabeltwo.Position = UDim2.new(0.03,0,0.37,0)
+        uselesslabeltwo.Size = UDim2.new(0,29,0,24)
+        uselesslabeltwo.Text = "Ping: "
+        uselesslabeltwo.TextColor3 = Color3.fromRGB(255,255,255)
+        uselesslabeltwo.TextSize = 14
+
+        fpslabel.Parent = madebybloodofbatus
+        fpslabel.BackgroundTransparency = 1
+        fpslabel.Position = UDim2.new(0.72,0,0.35,0)
+        fpslabel.Size = UDim2.new(0,55,0,24)
+        fpslabel.Text = "0"
+        fpslabel.TextColor3 = Color3.fromRGB(255,255,255)
+        fpslabel.TextSize = 14
+
+        uselesslabelthree.Parent = madebybloodofbatus
+        uselesslabelthree.BackgroundTransparency = 1
+        uselesslabelthree.Position = UDim2.new(0.5,0,0.35,0)
+        uselesslabelthree.Size = UDim2.new(0,26,0,24)
+        uselesslabelthree.Text = "Fps: "
+        uselesslabelthree.TextColor3 = Color3.fromRGB(255,255,255)
+        uselesslabelthree.TextSize = 14
+
+        pinglabel.Parent = madebybloodofbatus
+        pinglabel.BackgroundTransparency = 1
+        pinglabel.Position = UDim2.new(0.2,0,0.37,0)
+        pinglabel.Size = UDim2.new(0,55,0,24)
+        pinglabel.Text = "0"
+        pinglabel.TextColor3 = Color3.fromRGB(255,255,255)
+        pinglabel.TextSize = 14
+
+        uselessframeone.Parent = madebybloodofbatus
+        uselessframeone.BackgroundColor3 = Color3.fromRGB(255,255,255)
+        uselessframeone.Position = UDim2.new(0.004,0,0.24,0)
+        uselessframeone.Size = UDim2.new(0,224,0,5)
+        UICornerww.CornerRadius = UDim.new(0,50)
+        UICornerww.Parent = uselessframeone
+
+        uselesslabelfour.Parent = madebybloodofbatus
+        uselesslabelfour.BackgroundTransparency = 1
+        uselesslabelfour.Position = UDim2.new(0.05,0,0.81,0)
+        uselesslabelfour.Size = UDim2.new(0,95,0,12)
+        uselesslabelfour.Text = "Anti-Afk Auto Enabled"
+        uselesslabelfour.TextColor3 = Color3.fromRGB(255,255,255)
+        uselesslabelfour.TextSize = 14
+
+        -- Sistema Anti-Idle
+        LocalPlayer.Idled:Connect(function()
+            VirtualInputManager:CaptureController()
+            VirtualInputManager:ClickButton2(Vector2.new())
+        end)
+
+        -- FPS Counter
+        local RunService = game:GetService("RunService")
+        local sec = tick()
+        local FPS = {}
+        RunService.RenderStepped:Connect(function()
+            local fr = tick()
+            for i=#FPS,1,-1 do FPS[i+1] = (FPS[i]>=fr-1) and FPS[i] or nil end
+            FPS[1] = fr
+            local fps = math.floor((tick()-sec>=1 and #FPS) or (#FPS/(tick()-sec)))
+            fpslabel.Text = tostring(fps)
+        end)
+
+        task.spawn(function()
+            while getgenv().AntiAfkExecuted do
+                task.wait(1)
+                local success, pingVal = pcall(function()
+                    return math.floor(tonumber(Stats:FindFirstChild("PerformanceStats").Ping:GetValue()))
+                end)
+                pinglabel.Text = success and tostring(pingVal) or "0"
+            end
+        end)
+
+        local saniye, dakika, saat = 0,0,0
+        getgenv().zamanbaslaticisi = true
+        task.spawn(function()
+            while getgenv().zamanbaslaticisi do
+                saniye = saniye + 1
+                task.wait(1)
+                if saniye>=60 then saniye=0;dakika=dakika+1 end
+                if dakika>=60 then dakika=0;saat=saat+1 end
+                timerlabel.Text = saat..":"..dakika..":"..saniye
+            end
+        end)
+    else
+        getgenv().AntiAfkExecuted = false
+        getgenv().zamanbaslaticisi = false
+        if game.CoreGui:FindFirstChild("thisoneissocoldww") then
+            game.CoreGui.thisoneissocoldww:Destroy()
+        end
+    end
+end)
+
+MainTab:AddSwitch("Walk on Water", function(bool)
+    for _, part in ipairs(parts) do
+        if part and part.Parent then
+            part.CanCollide = bool
+        end
+    end
+end)
+
+local timeDropdown = MainTab:AddDropdown("Change Time", function(selection)
+    if selection == "Night" then
+        Lighting.ClockTime = 0
+    elseif selection == "Day" then
+        Lighting.ClockTime = 12
+    elseif selection == "Midnight" then
+        Lighting.ClockTime = 6
+    end
+end)
+timeDropdown:Add("Night")
+timeDropdown:Add("Day")
+timeDropdown:Add("Midnight")
+
+-- ========================================================
+-- PESTAÑA: FARM OP
+-- ========================================================
+local AutoFarm = window:AddTab("Farm Op")
+
+getgenv()._AutoRepFarmEnabled = false  
+AutoFarm:AddSwitch("Strength Op", function(state)
+    getgenv()._AutoRepFarmEnabled = state
+end)
+
+task.spawn(function()
+    while true do
+        if getgenv()._AutoRepFarmEnabled and LocalPlayer:FindFirstChild("muscleEvent") then
+            for i = 1, 55 do
+                LocalPlayer.muscleEvent:FireServer("rep")
+            end
+        end
+        task.wait()
+    end
+end)
+
+local autoEatEnabled = false
+task.spawn(function()
+    while true do
+        if autoEatEnabled then
+            local backpack = LocalPlayer:WaitForChild("Backpack")
+            local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+            local egg = backpack:FindFirstChild("Protein Egg")
+            if egg then
+                egg.Parent = character
+                pcall(function() egg:Activate() end)
+            end
+            task.wait(1800)
+        else
             task.wait(1)
         end
-    end)
-end
-
--- 6. Función de Utilidad: Teletransporte a zonas o áreas (ej. Gym principal, leyendas, etc.)
-function MuscleLibrary.TeleportTo(position)
-    local character = LocalPlayer.Character
-    local rootPart = character and character:FindFirstChild("HumanoidRootPart")
-    if rootPart and typeof(position) == "CFrame" then
-        rootPart.CFrame = position
     end
+end)
+
+AutoFarm:AddSwitch("Auto Eat Egg 30 Minuts", function(state)
+    autoEatEnabled = state
+end)
+
+AutoFarm:AddSwitch("Spin Fortune Wheel", function(state)
+    _G.AutoSpinWheel = state
+    if state then
+        task.spawn(function()
+            while _G.AutoSpinWheel and task.wait(0.1) do
+                ReplicatedStorage.rEvents.openFortuneWheelRemote:InvokeServer(
+                    "openFortuneWheel",
+                    ReplicatedStorage.fortuneWheelChances["Fortune Wheel"]
+                )
+            end
+        end)
+    end
+end)
+
+AutoFarm:AddButton("Anti Lag", function()
+    for _, v in pairs(game:GetDescendants()) do
+        if v:IsA("ParticleEmitter") or v:IsA("Smoke") or v:IsA("Fire") or v:IsA("Sparkles") then
+            v.Enabled = false
+        end
+    end
+    Lighting.GlobalShadows = false
+    Lighting.FogEnd = 9e9
+    Lighting.Brightness = 0
+    settings().Rendering.QualityLevel = 1
+end)
+
+AutoFarm:AddButton("Equip Swift Samurai", function()
+    local petsFolder = LocalPlayer:FindFirstChild("petsFolder")
+    if not petsFolder then return end
+
+    for _, folder in pairs(petsFolder:GetChildren()) do
+        if folder:IsA("Folder") then
+            for _, pet in pairs(folder:GetChildren()) do
+                ReplicatedStorage.rEvents.equipPetEvent:FireServer("unequipPet", pet)
+            end
+        end
+    end
+    task.wait(0.1)
+
+    local equipped = 0
+    for _, folder in pairs(petsFolder:GetChildren()) do
+        if folder:IsA("Folder") then
+            for _, pet in pairs(folder:GetChildren()) do
+                if pet.Name == "Swift Samurai" then
+                    ReplicatedStorage.rEvents.equipPetEvent:FireServer("equipPet", pet)
+                    equipped += 1
+                    if equipped >= 8 then return end
+                end
+            end
+        end
+    end
+end)
+
+AutoFarm:AddButton("Jungle Squat", function()
+    local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    local hrp = char:WaitForChild("HumanoidRootPart")
+    hrp.CFrame = CFrame.new(-8371.4336, 6.7981, 2858.8853)
+    task.wait(0.2)
+    VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.E, false, game)
+    task.wait(0.05)
+    VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.E, false, game)
+end)
+
+AutoFarm:AddButton("Jungle lift", function()
+    local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    local hrp = char:WaitForChild("HumanoidRootPart")
+    hrp.CFrame = CFrame.new(-8652.8672, 29.2667, 2089.2617)
+    task.wait(0.2)
+    VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.E, false, game)
+    task.wait(0.05)
+    VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.E, false, game)
+end)
+
+-- ========================================================
+-- SECCIÓN: RENACIMIENTO RÁPIDO
+-- ========================================================
+local fastStrengthFolder = AutoFarm:AddFolder("Funciones de Renacimiento Rápido")
+
+local leaderstats = LocalPlayer:WaitForChild("leaderstats")
+local rebirthsStat = leaderstats:WaitForChild("Rebirths")
+
+local uptimeLabel = fastStrengthFolder:AddLabel("0d 0h 0m 0s")
+local rebirthsInfoLabel = fastStrengthFolder:AddLabel("Renacimientos: 0 | Ganados: 0")
+local requiredStrengthLabel = fastStrengthFolder:AddLabel("Fuerza Necesaria: 0")
+
+local startTime = tick()
+local initialRebirths = rebirthsStat.Value
+
+local function getStrengthRequiredForRebirth()
+    return math.floor(5000 + (2500 * rebirthsStat.Value))
 end
 
-return MuscleLibrary
+task.spawn(function()
+    while true do
+        pcall(function()
+            local currentRebirths = rebirthsStat.Value
+            local totalRebirthsGained = currentRebirths - initialRebirths
+            local elapsed = tick() - startTime
+
+            local days = math.floor(elapsed / 86400)
+            local hours = math.floor((elapsed % 86400) / 3600)
+            local minutes = math.floor((elapsed % 3600) / 60)
+            local seconds = math.floor(elapsed % 60)
+
+            uptimeLabel.Text = string.format("%dd %dh %dm %ds", days, hours, minutes, seconds)
+            rebirthsInfoLabel.Text = "Renacimientos: " .. currentRebirths .. " | Ganados: " .. totalRebirthsGained
+            requiredStrengthLabel.Text = "Fuerza Necesaria: " .. FormatNumber(getStrengthRequiredForRebirth())
+        end)
+        task.wait(1)
+    end
+end)
+
+print("¡Script de Matias cargado y listo en Xeno!")
+
+```
