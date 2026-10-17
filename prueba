@@ -1,0 +1,180 @@
+-- ========================================================
+-- MUSCLE LEGENDS SCRIPT - OPTIMIZADO + ROCAS + CRISTALES
+-- ========================================================
+
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local Lighting = game:GetService("Lighting")
+
+local LocalPlayer = Players.LocalPlayer
+
+-- Estados del Script (Flags)
+local Config = {
+    AutoLift = false,
+    AutoPunch = false,
+    AutoSpeed = false,
+    AutoHandstands = false,
+    AutoRock = false,
+    AutoCrystals = false,
+    SelectedCrystal = "Blue Crystal", -- Cristal por defecto
+    FPSBoost = false
+}
+
+-- Función auxiliar para obtener herramientas
+local function getTool(toolName)
+    local character = LocalPlayer.Character
+    if not character then return nil end
+    
+    local tool = character:FindFirstChild(toolName)
+    if tool then return tool end
+    
+    local backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
+    if backpack then
+        tool = backpack:FindFirstChild(toolName)
+        if tool then
+            tool.Parent = character
+            return tool
+        end
+    end
+    return nil
+end
+
+-- ========================================================
+-- 1. OPTIMIZACIÓN PARA EL LAG (FPS BOOST)
+-- ========================================================
+local function toggleFPSBoost(state)
+    Config.FPSBoost = state
+    if state then
+        -- Desactivar efectos visuales pesados y texturas
+        Lighting.GlobalShadows = false
+        Lighting.FogEnd = 9e9
+        for _, v in ipairs(Workspace:GetDescendants()) do
+            if v:IsA("BasePart") then
+                v.Material = Enum.Material.SmoothPlastic
+                v.Reflectance = 0
+            elseif v:IsA("Decal") or v:IsA("Texture") then
+                v.Transparency = 1
+            end
+        end
+        -- Bajar gráficos al mínimo
+        settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+    else
+        Lighting.GlobalShadows = true
+        settings().Rendering.QualityLevel = Enum.QualityLevel.Automatic
+    end
+end
+
+-- ========================================================
+-- 2. FUNCIONES DE FARMEO (Fuerza, Durabilidad, Velocidad)
+-- ========================================================
+task.spawn(function()
+    while true do
+        task.wait(0.1)
+        local char = LocalPlayer.Character
+        if char then
+            -- Auto Levantar Pesas
+            if Config.AutoLift then
+                local tool = getTool("Weight")
+                if tool then tool:Activate() end
+            end
+            
+            -- Auto Golpear (Durabilidad básica)
+            if Config.AutoPunch then
+                local tool = getTool("Punch") or getTool("Super Punch")
+                if tool then tool:Activate() end
+            end
+            
+            -- Auto Velocidad (Caminadora)
+            if Config.AutoSpeed then
+                local tool = getTool("Treadmill")
+                if tool then tool:Activate() end
+            end
+            
+            -- Auto Agilidad (Pino / Handstands)
+            if Config.AutoHandstands then
+                local tool = getTool("Handstands")
+                if tool then tool:Activate() end
+            end
+        end
+    end
+end)
+
+-- ========================================================
+-- 3. FUNCIÓN PARA PELEGAR A LAS ROCAS (Auto Rock)
+-- ========================================================
+-- Se teletransporta o posiciona cerca de la roca seleccionada y la golpea automáticamente para subir durabilidad
+local function toggleAutoRock(state, rockName)
+    Config.AutoRock = state
+    task.spawn(function()
+        while Config.AutoRock do
+            local char = LocalPlayer.Character
+            local rootPart = char and char:FindFirstChild("HumanoidRootPart")
+            
+            if rootPart then
+                -- Buscar la carpeta de zonas o rocas en el mapa
+                local rocksFolder = Workspace:FindFirstChild("Rocks") or Workspace -- Ajuste según contenedor común
+                -- Intentar encontrar una roca cercana o específica
+                for _, obj in ipairs(Workspace:GetDescendants()) do
+                    if obj:IsA("Model") and (obj.Name:find("Rock") or obj.Name:find("Mountain")) then
+                        local mainPart = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")
+                        if mainPart and (rootPart.Position - mainPart.Position).Magnitude < 150 then
+                            -- Posicionarse al lado de la roca
+                            rootPart.CFrame = mainPart.CFrame + Vector3.new(0, 3, 3)
+                            break
+                        end
+                    end
+                end
+                
+                -- Asegurarse de tener el guante/puño equipado y golpear
+                local punchTool = getTool("Punch") or getTool("Super Punch")
+                if punchTool then
+                    punchTool:Activate()
+                end
+            end
+            task.wait(0.15)
+        end
+    end)
+end
+
+-- ========================================================
+-- 4. FUNCIÓN PARA SACAR MASCOTAS DE CRISTALES (Auto Crystals)
+-- ========================================================
+local function toggleAutoCrystals(state, crystalName)
+    Config.AutoCrystals = state
+    task.spawn(function()
+        while Config.AutoCrystals do
+            pcall(function()
+                -- Los cristales en Muscle Legends suelen abrirse mediante eventos remotos en ReplicatedStorage
+                local remote = ReplicatedStorage:FindFirstChild("Packages") 
+                    and ReplicatedStorage.Packages:FindFirstChild("_Index") 
+                    and ReplicatedStorage.Packages._Index:FindFirstChild("knit@1.4.7") -- O ruta genérica de remotos
+                    
+                -- Método alternativo estándar buscando remotos de compra/apertura de cristales
+                for _, remoteObj in ipairs(ReplicatedStorage:GetDescendants()) do
+                    if remoteObj:IsA("RemoteEvent") and (remoteObj.Name:lower():find("crystal") or remoteObj.Name:lower():find("pet")) then
+                        -- Intenta disparar la apertura del cristal seleccionado
+                        remoteObj:FireServer(crystalName, 1)
+                    end
+                end
+            end)
+            task.wait(0.5) -- Pausa para evitar saturar el servidor
+        end
+    end)
+end
+
+-- ========================================================
+-- PANEL DE CONTROL BÁSICO EN CONSOLA / NOTIFICACIÓN
+-- ========================================================
+print("========================================================")
+print("Librería de Muscle Legends cargada con éxito.")
+print("Comandos disponibles en la consola para activar funciones:")
+print("--------------------------------------------------------")
+print("--> Config.AutoLift = true (Activar pesas)")
+print("--> Config.AutoPunch = true (Activar golpes)")
+print("--> Config.AutoSpeed = true (Activar velocidad)")
+print("--> toggleFPSBoost(true) (Activar optimización de lag)")
+print("--> toggleAutoRock(true) (Activar golpeo de rocas)")
+print("--> toggleAutoCrystals(true, 'Blue Crystal') (Abrir cristales)")
+print("========================================================")
