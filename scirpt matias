@@ -1448,5 +1448,5 @@ local PlayerDrop = estadisticas:AddDropdown("Select Player", function(Value)
 end)
 
 for _, Plr in pairs(game.Players:GetPlayers()) do
-    PlayerDrop:Add(Plr.DisplayName .. " | " .. Plr.Name)
+    PlayerDrop:Add(Plr.DisplayName ..  |   .. Plr.Name)
 end
