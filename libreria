@@ -8,6 +8,7 @@ local RunService = game:GetService("RunService")
 local VirtualUser = game:GetService("VirtualUser")
 local VirtualInputManager = game:GetService("VirtualInputManager")
 local CoreGui = game:GetService("CoreGui")
+local Stats = game:GetService("Stats")
 local LocalPlayer = Players.LocalPlayer
 
 -- Contenedor seguro compatible con Xeno
@@ -475,6 +476,8 @@ end
 -- ==========================================
 -- CONFIGURACIÓN Y FUNCIONES DEL JUEGO
 -- ==========================================
+getgenv()._AutoRepFarmEnabled = false
+
 local Config = {
     FastRep = false,
     AutoRebirth = false,
@@ -527,6 +530,16 @@ local Window = Library:AddWindow("General.EMPI2.0 xeno // MatiasXIsotx", {
     min_size = Vector2.new(480, 420)
 })
 
+-- PESTAÑA NAVEGACIÓN: FARM OP
+local AutoFarm = Window:AddTab("Farm Op")
+
+AutoFarm:AddLabel("--- Módulo Avanzado ---")
+
+AutoFarm:AddSwitch("Strength Op", function(state)
+    getgenv()._AutoRepFarmEnabled = state
+end)
+
+
 -- PESTAÑA 1: FARMING GENERAL
 local FarmTab = Window:AddTab("Farm Rep")
 
@@ -551,7 +564,7 @@ FarmTab:AddSwitch("Auto Rebirth", function(state)
 end)
 
 
--- PESTAÑA 2: GIMNASIO INDUSTRIAL (Solo botones de acción limpios)
+-- PESTAÑA 2: GIMNASIO INDUSTRIAL
 local IndustrialTab = Window:AddTab("Gym Industrial")
 
 IndustrialTab:AddLabel("--- Industrial Squat ---")
@@ -621,14 +634,12 @@ task.spawn(function()
             local char = LocalPlayer.Character
             local humanoid = char:FindFirstChildOfClass("Humanoid")
             
-            -- Si el jugador tiene equipada cualquier herramienta (incluyendo las de máquina)
             local equippedTool = char:FindFirstChildOfClass("Tool")
             if equippedTool then
                 pcall(function()
                     equippedTool:Activate()
                 end)
             elseif Config.SelectedTool ~= "" and humanoid then
-                -- Buscar la herramienta seleccionada en la mochila si no tiene ninguna en la mano
                 local tool = char:FindFirstChild(Config.SelectedTool)
                 if not tool then
                     local backpackTool = LocalPlayer.Backpack:FindFirstChild(Config.SelectedTool)
@@ -666,6 +677,44 @@ LocalPlayer.Idled:Connect(function()
     if Config.AntiAFK then
         VirtualUser:CaptureController()
         VirtualUser:ClickButton2(Vector2.new(0, 0))
+    end
+end)
+
+-- INTEGRACIÓN: MÓDULO BATCH FARM (STRENGTH OP)
+local REPS_PER_CYCLE = 55
+local MAX_PING = 5000  
+local MIN_PING = 300
+
+local function getPing()
+    local success, ping = pcall(function()
+        return Stats.Network.ServerStatsItem["Data Ping"]:GetValue()
+    end)
+    return success and ping or 999
+end
+
+task.spawn(function()
+    local farmingPaused = false
+
+    while true do
+        if getgenv()._AutoRepFarmEnabled then
+            local ping = getPing()
+
+            if ping > MAX_PING then
+                farmingPaused = true
+            end
+
+            if ping <= MIN_PING then
+                farmingPaused = false
+            end
+
+            if not farmingPaused and LocalPlayer:FindFirstChild("muscleEvent") then
+                for i = 1, REPS_PER_CYCLE do
+                    LocalPlayer.muscleEvent:FireServer("rep")
+                end
+            end
+        end
+
+        task.wait()
     end
 end)
 
