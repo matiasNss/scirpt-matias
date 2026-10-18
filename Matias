@@ -1,15 +1,11 @@
--- Cargar la librería (Asegúrate de ejecutar primero el código de tu librería o tenerlo en el mismo script)
--- Si tienes tu librería guardada en un ModuleScript o globalmente, inicialízala aquí:
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/matiasNss/scirpt-matias/refs/heads/main/libreria"))() 
--- NOTA: Si vas a pegar todo junto en un solo ejecutable, pon el código de la librería ARRIBA y elimina la línea de arriba.
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/matiasNss/scirpt-matias/refs/heads/main/Matias", true))()
 
 local Players = game:GetService("Players")
 local VirtualUser = game:GetService("VirtualUser")
-local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 
 -- ==========================================
--- VARIABLES DE ESTADO Y CONFIGURACIÓN
+-- VARIABLES DE CONFIGURACIÓN
 -- ==========================================
 local Config = {
     FastRep = false,
@@ -22,8 +18,8 @@ local Config = {
 -- CREACIÓN DE LA INTERFAZ
 -- ==========================================
 local Window = Library:AddWindow("Muscle Legends - System", {
-    main_color = Color3.fromRGB(0, 170, 255), -- Azul relámpago / Sistema
-    min_size = Vector2.new(460, 380)
+    main_color = Color3.fromRGB(0, 170, 255),
+    min_size = Vector2.new(460, 400)
 })
 
 -- 1. PESTAÑA PRINCIPAL (FARMING)
@@ -60,26 +56,31 @@ local DurabilityLabel = StatsTab:AddLabel("Durabilidad: Cargando...")
 local AgilityLabel = StatsTab:AddLabel("Agilidad: Cargando...")
 local RebirthsLabel = StatsTab:AddLabel("Rebirths: Cargando...")
 
-StatsTab:AddLabel("--- Calculadora de Rebirth ---")
-local TargetRebirthBox = StatsTab:AddTextBox("Rebirths Objetivo (ej: 100)", function(text) end)
-local CalcResultLabel = StatsTab:AddLabel("Resultado: Introduce un número")
+StatsTab:AddLabel("--- Calculadora de Ganancias ---")
+local GainPerRepBox = StatsTab:AddTextBox("Fuerza/Durabilidad por repetición (ej: 50)", function(text) end)
+local RepsPerMinBox = StatsTab:AddTextBox("Repeticiones estimadas por minuto (ej: 120)", function(text) end)
 
-StatsTab:AddButton("Calcular Fuerza Requerida", function()
-    local target = tonumber(TargetRebirthBox.Text)
-    if target then
-        -- En Muscle Legends la fórmula base requiere 10,000 de fuerza * (Rebirths + 1)
-        local currentRebirths = LocalPlayer.leaderstats and LocalPlayer.leaderstats.Rebirths and LocalPlayer.leaderstats.Rebirths.Value or 0
-        if target <= currentRebirths then
-            CalcResultLabel.Text = "Resultado: ¡Ya alcanzaste este objetivo!"
-        else
-            local totalReq = 0
-            for i = currentRebirths, target - 1 do
-                totalReq = totalReq + (10000 * (i + 1))
-            end
-            CalcResultLabel.Text = string.format("Fuerza Necesaria: %s", tostring(totalReq))
-        end
+local CalcHourLabel = StatsTab:AddLabel("Por Hora: 0")
+local CalcDayLabel = StatsTab:AddLabel("Por Día: 0")
+local CalcWeekLabel = StatsTab:AddLabel("Por Semana: 0")
+
+StatsTab:AddButton("Calcular Ganancias (Fuerza/Durabilidad)", function()
+    local gain = tonumber(GainPerRepBox.Text)
+    local repsMin = tonumber(RepsPerMinBox.Text)
+    
+    if gain and repsMin then
+        local perMinute = gain * repsMin
+        local perHour = perMinute * 60
+        local perDay = perHour * 24
+        local perWeek = perDay * 7
+        
+        CalcHourLabel.Text = string.format("Por Hora: %s", tostring(perHour))
+        CalcDayLabel.Text = string.format("Por Día: %s", tostring(perDay))
+        CalcWeekLabel.Text = string.format("Por Semana: %s", tostring(perWeek))
     else
-        CalcResultLabel.Text = "Resultado: Número inválido"
+        CalcHourLabel.Text = "Por Hora: Introduce números válidos"
+        CalcDayLabel.Text = "Por Día: -"
+        CalcWeekLabel.Text = "Por Semana: -"
     end
 end)
 
@@ -139,7 +140,7 @@ LocalPlayer.Idled:Connect(function()
     end
 end)
 
--- Actualización en tiempo real de Estadísticas en la UI
+-- Actualización en tiempo real de Estadísticas
 task.spawn(function()
     while task.wait(1) do
         if LocalPlayer:FindFirstChild("leaderstats") then
@@ -153,14 +154,11 @@ task.spawn(function()
             end
         end
         
-        -- Durabilidad y Agilidad a menudo están en carpetas de datos del jugador
-        if LocalPlayer:FindFirstChild("MuscleCustomization") or LocalPlayer:FindFirstChild("Agility") then
-            if LocalPlayer:FindFirstChild("Agility") then
-                AgilityLabel.Text = "Agilidad: " .. tostring(LocalPlayer.Agility.Value)
-            end
-            if LocalPlayer:FindFirstChild("Durability") then
-                DurabilityLabel.Text = "Durabilidad: " .. tostring(LocalPlayer.Durability.Value)
-            end
+        if LocalPlayer:FindFirstChild("Agility") then
+            AgilityLabel.Text = "Agilidad: " .. tostring(LocalPlayer.Agility.Value)
+        end
+        if LocalPlayer:FindFirstChild("Durability") then
+            DurabilityLabel.Text = "Durabilidad: " .. tostring(LocalPlayer.Durability.Value)
         end
     end
 end)
