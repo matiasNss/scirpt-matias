@@ -1,14 +1,11 @@
-local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/Cesarth1210/guthub/refs/heads/main/Mainlua"))()
-
+local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/matiasNss/scirpt-matias/refs/heads/main/Matias"))()
 local player = game.Players.LocalPlayer
 local displayName = player.DisplayName or player.Name
-
 local window = library:AddWindow("CESARXMXTIAS HUB| BIENVENID@ " .. string.upper(displayName), {
     main_color = Color3.fromRGB(255, 0, 0),
     min_size = Vector2.new(480, 520),
     can_resize = false,
 })
-
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local Stats = game:GetService("Stats")
@@ -29,7 +26,6 @@ local function FormatNumber(value)
     end
     return string.format("%.2f%s", value, suffixes[index])
 end
-
 local function FormatNumberWithCommas(value)
     local sign = value < 0 and "-" or ""
     local intPart, decPart = tostring(math.abs(value)):match("^(%d+)(%.?.*)$")
@@ -895,23 +891,67 @@ local uptimeLabel = fastStrengthFolder:AddLabel("Tiempo Activo: 0d 0h 0m 0s")
 local paceLabel = fastStrengthFolder:AddLabel("Ritmo: 0 / Hora | 0 / Día | 0 / Sem.")
 local avgPaceLabel = fastStrengthFolder:AddLabel("Promedio: 0 / Hora | 0 / Día | 0 / Sem.")
 
--- Corrección dinámica del área de desplazamiento (CanvasSize)
+-- PARCHE COMPLETO DE COMPATIBILIDAD PARA XENO EXECUTOR
 task.spawn(function()
     task.wait(0.5)
     local coreGui = (gethui and gethui()) or game:GetService("CoreGui")
     local ui = coreGui:FindFirstChild("SoloLevelingUI")
+    
     if ui then
-        for _, scroller in pairs(ui:GetDescendants()) do
-            if scroller:IsA("ScrollingFrame") then
-                scroller.ScrollBarThickness = 5
-                local layout = scroller:FindFirstChildOfClass("UIListLayout")
-                if layout then
-                    local function updateCanvas()
-                        scroller.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 60)
-                    end
-                    layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(updateCanvas)
-                    updateCanvas()
+        -- 1. Reparar la barra superior de pestañas (revela los botones transparentes o sin texto)
+        local mainFrame = ui:FindFirstChild("MainFrame")
+        if mainFrame then
+            for _, child in pairs(mainFrame:GetDescendants()) do
+                if child:IsA("TextButton") and child.Parent and child.Parent.Name == "TabBar" then
+                    child.TextColor3 = Color3.fromRGB(255, 255, 255)
+                    child.BackgroundTransparency = 0
+                    child.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
                 end
+            end
+        end
+
+        -- 2. Reparar todos los ScrollingFrames y forzar el cálculo dinámico de altura (CanvasSize)
+        local function fixScrolls()
+            for _, scroller in pairs(ui:GetDescendants()) do
+                if scroller:IsA("ScrollingFrame") then
+                    scroller.ScrollingEnabled = true
+                    scroller.ScrollBarThickness = 6
+                    scroller.ScrollBarImageColor3 = Color3.fromRGB(255, 0, 0)
+                    
+                    local layout = scroller:FindFirstChildOfClass("UIListLayout")
+                    if layout then
+                        local function updateCanvas()
+                            local totalHeight = layout.AbsoluteContentSize.Y + 80
+                            
+                            -- Si hay carpetas abiertas dentro del scroll, sumar la altura de sus elementos hijos
+                            for _, child in pairs(scroller:GetChildren()) do
+                                if child:IsA("Frame") and child.ClipsDescendants then
+                                    local subLayout = child:FindFirstChildOfClass("UIListLayout", true)
+                                    if subLayout then
+                                        totalHeight = totalHeight + subLayout.AbsoluteContentSize.Y
+                                    end
+                                end
+                            end
+                            
+                            scroller.CanvasSize = UDim2.new(0, 0, 0, totalHeight)
+                        end
+                        
+                        layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(updateCanvas)
+                        updateCanvas()
+                    end
+                end
+            end
+        end
+
+        fixScrolls()
+        
+        -- Detectar clics o aperturas de carpetas para recalcular el tamaño al instante
+        for _, btn in pairs(ui:GetDescendants()) do
+            if btn:IsA("TextButton") then
+                btn.MouseButton1Click:Connect(function()
+                    task.wait(0.05)
+                    fixScrolls()
+                end)
             end
         end
     end
