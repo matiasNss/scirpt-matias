@@ -479,7 +479,8 @@ local Config = {
     FastRep = false,
     AutoRebirth = false,
     AntiAFK = false,
-    SelectedTool = "Punch"
+    SelectedTool = "Punch",
+    AutoIndustrialSquat = false
 }
 
 local sessionStartTime = tick()
@@ -551,21 +552,28 @@ FarmTab:AddSwitch("Auto Rebirth", function(state)
 end)
 
 
--- PESTAÑA 2: GIMNASIO INDUSTRIAL (Máquinas)
+-- PESTAÑA 2: GIMNASIO INDUSTRIAL (Con Teletransporte y Fast Farm Automático)
 local IndustrialTab = Window:AddTab("Gym Industrial")
 
 IndustrialTab:AddLabel("--- Máquinas Avanzadas ---")
 
-IndustrialTab:AddButton("Industrial Squat", function()
+IndustrialTab:AddButton("Teleport: Industrial Squat", function()
     local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
     local hrp = char:WaitForChild("HumanoidRootPart")
-
     hrp.CFrame = CFrame.new(-5217.11523, 61.056282, 5418.07715, 1, 0, 0, 0, 1, 0, 0, 0, 1) + Vector3.new(0, 3, 0)
     task.wait(0.2)
-
     VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.E, false, game)
     task.wait(0.05)
     VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.E, false, game)
+end)
+
+IndustrialTab:AddSwitch("Auto Farm (Industrial Squat)", function(state)
+    Config.AutoIndustrialSquat = state
+    if state then
+        local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+        local hrp = char:WaitForChild("HumanoidRootPart")
+        hrp.CFrame = CFrame.new(-5217.11523, 61.056282, 5418.07715, 1, 0, 0, 0, 1, 0, 0, 0, 1) + Vector3.new(0, 3, 0)
+    end
 end)
 
 
@@ -599,7 +607,7 @@ end)
 -- BUCLES DE FUNCIONAMIENTO SEGUROS
 -- ==========================================
 
--- Fast Rep Seguro
+-- Fast Rep Seguro (Herramientas normales)
 task.spawn(function()
     while true do
         task.wait(0.12)
@@ -622,6 +630,20 @@ task.spawn(function()
                     end)
                 end
             end
+        end
+    end
+end)
+
+-- Auto Farm para Industrial Squat (Simula la tecla E constantemente)
+task.spawn(function()
+    while true do
+        task.wait(0.15)
+        if Config.AutoIndustrialSquat then
+            pcall(function()
+                VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.E, false, game)
+                task.wait(0.05)
+                VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.E, false, game)
+            end)
         end
     end
 end)
@@ -653,6 +675,7 @@ task.spawn(function()
     while task.wait(1) do
         local currentTime = tick()
         local elapsedSeconds = currentTime - sessionStartTime
+        TimeElapsedLabel.Text = "Fast Rep Time: " + formatTime(elapsedSeconds) -- corregido abajo
         TimeElapsedLabel.Text = "Fast Rep Time: " .. formatTime(elapsedSeconds)
         
         local currentStrength = 0
