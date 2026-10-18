@@ -1,957 +1,165 @@
-local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/matiasNss/scirpt-matias/refs/heads/main/Matias"))()
-local player = game.Players.LocalPlayer
-local displayName = player.DisplayName or player.Name
-local window = library:AddWindow("CESARXMXTIAS HUB| BIENVENID@ " .. string.upper(displayName), {
-    main_color = Color3.fromRGB(255, 0, 0),
-    min_size = Vector2.new(480, 520),
-    can_resize = false,
-})
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Players = game:GetService("Players")
-local Stats = game:GetService("Stats")
-local Lighting = game:GetService("Lighting")
-local VirtualInputManager = game:GetService("VirtualInputManager")
-local Workspace = game:GetService("Workspace")
-local StarterGui = game:GetService("StarterGui")
-local RunService = game:GetService("RunService")
+-- Cargar la librería (Asegúrate de ejecutar primero el código de tu librería o tenerlo en el mismo script)
+-- Si tienes tu librería guardada en un ModuleScript o globalmente, inicialízala aquí:
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/tu-usuario/tu-repo/main/Library.lua"))() 
+-- NOTA: Si vas a pegar todo junto en un solo ejecutable, pon el código de la librería ARRIBA y elimina la línea de arriba.
 
+local Players = game:GetService("Players")
+local VirtualUser = game:GetService("VirtualUser")
+local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 
-local function FormatNumber(value)
-    local suffixes = {"", "K", "M", "B", "T", "Qa", "Qi"}
-    local index = 1
-    while value >= 1000 and index < #suffixes do
-        value = value / 1000
-        index = index + 1
-    end
-    return string.format("%.2f%s", value, suffixes[index])
-end
-local function FormatNumberWithCommas(value)
-    local sign = value < 0 and "-" or ""
-    local intPart, decPart = tostring(math.abs(value)):match("^(%d+)(%.?.*)$")
-    intPart = intPart:reverse():gsub("(%d%d%d)", "%1,"):reverse():gsub("^,", "")
-    return sign .. intPart .. (decPart or "")
-end
+-- ==========================================
+-- VARIABLES DE ESTADO Y CONFIGURACIÓN
+-- ==========================================
+local Config = {
+    FastRep = false,
+    AutoRebirth = false,
+    AntiAFK = false,
+    SelectedTool = "Punch"
+}
 
-local function FormatDisplay(value)
-    return "[ " .. FormatNumberWithCommas(value) .. " | " .. FormatNumber(value) .. " ]"
-end
+-- ==========================================
+-- CREACIÓN DE LA INTERFAZ
+-- ==========================================
+local Window = Library:AddWindow("Muscle Legends - System", {
+    main_color = Color3.fromRGB(0, 170, 255), -- Azul relámpago / Sistema
+    min_size = Vector2.new(460, 380)
+})
 
-task.spawn(function()
-    repeat task.wait() until game:IsLoaded()
-    task.wait(1)
+-- 1. PESTAÑA PRINCIPAL (FARMING)
+local FarmTab = Window:AddTab("Farming")
 
-    local suffixes = {
-        {"Qi", 1e18}, {"Qa", 1e15}, {"T", 1e12}, {"B", 1e9}, {"M", 1e6}, {"K", 1e3},
-    }
+FarmTab:AddLabel("--- Auto Ejercicio (Fast Rep) ---")
 
-    local function formatNumber(n)
-        for _, s in ipairs(suffixes) do
-            local name, val = s[1], s[2]
-            if n >= val then
-                return string.format("%.2f%s", n / val, name)
-            end
-        end
-        return tostring(math.floor(n))
-    end
+local ToolDropdown = FarmTab:AddDropdown("Herramienta", function(selected)
+    Config.SelectedTool = selected
+end)
+ToolDropdown:Add("Punch")
+ToolDropdown:Add("Weight")
+ToolDropdown:Add("Pushups")
+ToolDropdown:Add("Situps")
 
-    local function createBillboard(humanoid, character)
-        if not character:FindFirstChild("Head") then return end
-
-        local old = character:FindFirstChild("HP_BILLBOARD")
-        if old then old:Destroy() end
-
-        local billboard = Instance.new("BillboardGui")
-        billboard.Name = "HP_BILLBOARD"
-        billboard.Size = UDim2.new(6, 0, 1.2, 0)
-        billboard.StudsOffset = Vector3.new(0, 3.5, 0)
-        billboard.AlwaysOnTop = true
-        billboard.MaxDistance = 200
-        billboard.Parent = character.Head
-
-        local frame = Instance.new("Frame")
-        frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-        frame.BackgroundTransparency = 0.3
-        frame.Size = UDim2.new(1, 0, 1, 0)
-        frame.BorderSizePixel = 0
-        frame.Parent = billboard
-
-        local corner = Instance.new("UICorner")
-        corner.CornerRadius = UDim.new(0, 8)
-        corner.Parent = frame
-
-        local bar = Instance.new("Frame")
-        bar.BackgroundColor3 = Color3.fromRGB(255, 70, 70)
-        bar.Size = UDim2.new(1, 0, 1, 0)
-        bar.BorderSizePixel = 0
-        bar.Parent = frame
-
-        local gradient = Instance.new("UIGradient")
-        gradient.Color = ColorSequence.new({
-            ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)),
-            ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 0, 0))
-        })
-        gradient.Parent = bar
-
-        local stroke = Instance.new("UIStroke")
-        stroke.Thickness = 2
-        stroke.Color = Color3.fromRGB(0, 0, 0)
-        stroke.Transparency = 0.7
-        stroke.Parent = bar
-
-        local label = Instance.new("TextLabel")
-        label.BackgroundTransparency = 1
-        label.Size = UDim2.new(1, 0, 1, 0)
-        label.TextColor3 = Color3.new(1, 1, 1)
-        label.Font = Enum.Font.GothamBold
-        label.TextSize = 18
-        label.TextStrokeTransparency = 0.5
-        label.Parent = frame
-
-        local textConstraint = Instance.new("UITextSizeConstraint")
-        textConstraint.MaxTextSize = 24
-        textConstraint.MinTextSize = 14
-        textConstraint.Parent = label
-
-        local function updateHP()
-            if humanoid and humanoid.Parent then
-                local hp = humanoid.Health
-                local max = humanoid.MaxHealth
-                bar.Size = UDim2.new(hp / max, 0, 1, 0)
-                label.Text = formatNumber(hp) .. " / " .. formatNumber(max)
-            end
-        end
-
-        humanoid.HealthChanged:Connect(updateHP)
-        updateHP()
-    end
-
-    local function onCharacterAdded(character)
-        local humanoid = character:WaitForChild("Humanoid")
-        createBillboard(humanoid, character)
-    end
-
-    for _, plr in ipairs(Players:GetPlayers()) do
-        if plr.Character then
-            onCharacterAdded(plr.Character)
-        end
-        plr.CharacterAdded:Connect(onCharacterAdded)
-    end
-
-    Players.PlayerAdded:Connect(function(plr)
-        plr.CharacterAdded:Connect(onCharacterAdded)
-    end)
+FarmTab:AddSwitch("Activar Fast Rep", function(state)
+    Config.FastRep = state
 end)
 
--- Pestaña Principal
-local MainTab = window:AddTab("Principal")
-MainTab:AddLabel("Important:")
+FarmTab:AddLabel("--- Rebirth Automático ---")
 
-local antiKnockbackSwitch = MainTab:AddSwitch("Anti Fling", function(bool)
-    if bool then
-        local playerName = game.Players.LocalPlayer.Name
-        local character = game.Workspace:FindFirstChild(playerName)
-        if character then
-            local rootPart = character:FindFirstChild("HumanoidRootPart")
-            if rootPart then
-                local bodyVelocity = Instance.new("BodyVelocity")
-                bodyVelocity.MaxForce = Vector3.new(100000, 0, 100000)
-                bodyVelocity.Velocity = Vector3.new(0, 0, 0)
-                bodyVelocity.P = 1250
-                bodyVelocity.Parent = rootPart
-            end
-        end
-    else
-        local playerName = game.Players.LocalPlayer.Name
-        local character = game.Workspace:FindFirstChild(playerName)
-        if character then
-            local rootPart = character:FindFirstChild("HumanoidRootPart")
-            if rootPart then
-                local existingVelocity = rootPart:FindFirstChild("BodyVelocity")
-                if existingVelocity and existingVelocity.MaxForce == Vector3.new(100000, 0, 100000) then
-                    existingVelocity:Destroy()
-                end
-            end
-        end
-    end
+FarmTab:AddSwitch("Auto Rebirth", function(state)
+    Config.AutoRebirth = state
 end)
 
-local lockRunning = false
-local lockConnection
 
-local lockSwitch = MainTab:AddSwitch("Lock Position", function(Value)
-    local player = game.Players.LocalPlayer
+-- 2. PESTAÑA DE CALCULADORA Y ESTADÍSTICAS
+local StatsTab = Window:AddTab("Stats & Calc")
 
-    if Value then
-        lockRunning = true
-        lockConnection = game:GetService("RunService").Heartbeat:Connect(function()
-            local char = player.Character
-            if not char or not char:FindFirstChild("HumanoidRootPart") or not char:FindFirstChildOfClass("Humanoid") then return end
+StatsTab:AddLabel("--- Tus Estadísticas Actuales ---")
 
-            local hrp = char.HumanoidRootPart
-            local humanoid = char:FindFirstChildOfClass("Humanoid")
+local StrengthLabel = StatsTab:AddLabel("Fuerza: Cargando...")
+local DurabilityLabel = StatsTab:AddLabel("Durabilidad: Cargando...")
+local AgilityLabel = StatsTab:AddLabel("Agilidad: Cargando...")
+local RebirthsLabel = StatsTab:AddLabel("Rebirths: Cargando...")
 
-            if not humanoid or not hrp then return end
+StatsTab:AddLabel("--- Calculadora de Rebirth ---")
+local TargetRebirthBox = StatsTab:AddTextBox("Rebirths Objetivo (ej: 100)", function(text) end)
+local CalcResultLabel = StatsTab:AddLabel("Resultado: Introduce un número")
 
-            if not humanoid:FindFirstChild("LockState") then
-                humanoid.WalkSpeed = 0
-                humanoid.JumpPower = 0
-                humanoid.AutoRotate = false
-                humanoid:ChangeState(Enum.HumanoidStateType.Physics)
-                local marker = Instance.new("BoolValue", humanoid)
-                marker.Name = "LockState"
-                marker.Value = true
-                humanoid:SetAttribute("LockCFrame", hrp.CFrame)
-            end
-
-            local savedCFrame = humanoid:GetAttribute("LockCFrame")
-            if savedCFrame then
-                hrp.Velocity = Vector3.zero
-                hrp.RotVelocity = Vector3.zero
-                hrp.CFrame = savedCFrame
-            end
-        end)
-    else
-        lockRunning = false
-        if lockConnection then
-            lockConnection:Disconnect()
-            lockConnection = nil
-        end
-        local char = player.Character
-        if char then
-            local humanoid = char:FindFirstChildOfClass("Humanoid")
-            if humanoid then
-                humanoid.WalkSpeed = 250
-                humanoid.JumpPower = 50
-                humanoid.AutoRotate = true
-                humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
-                if humanoid:FindFirstChild("LockState") then
-                    humanoid.LockState:Destroy()
-                end
-                humanoid:SetAttribute("LockCFrame", nil)
-            end
-        end
-    end
-end)
-
-lockSwitch:Set(false)
-
-local showpetsswitch = MainTab:AddSwitch("Show Pets", function(bool)
-    local player = game:GetService("Players").LocalPlayer
-    if player:FindFirstChild("hidePets") then
-        player.hidePets.Value = bool
-    end
-end)
-showpetsswitch:Set(false)
-
-local showotherpetsswitch = MainTab:AddSwitch("Show Other Pets", function(bool)
-    local player = game:GetService("Players").LocalPlayer
-    if player:FindFirstChild("showOtherPetsOn") then
-        player.showOtherPetsOn.Value = bool
-    end
-end)
-showotherpetsswitch:Set(false)
-
-MainTab:AddLabel("Misc:")
-
-MainTab:AddSwitch("Infinite Jump", function(bool)
-    _G.InfiniteJump = bool
-
-    if bool then
-        local InfiniteJumpConnection
-        InfiniteJumpConnection = game:GetService("UserInputService").JumpRequest:Connect(function()
-            if _G.InfiniteJump then
-                game:GetService("Players").LocalPlayer.Character:FindFirstChildOfClass("Humanoid"):ChangeState("Jumping")
-            else
-                InfiniteJumpConnection:Disconnect()
-            end
-        end)
-    end
-end)
-
-local parts = {}
-local partSize = 2048
-local totalDistance = 50000
-local startPosition = Vector3.new(-2, -9.5, -2)
-
-local function createAllParts()
-    local numberOfParts = math.ceil(totalDistance / partSize)
-
-    for x = 0, numberOfParts - 1 do
-        for z = 0, numberOfParts - 1 do
-            local function createPart(pos, name)
-                local part = Instance.new("Part")
-                part.Size = Vector3.new(partSize, 1, partSize)
-                part.Position = pos
-                part.Anchored = true
-                part.Transparency = 1
-                part.CanCollide = true
-                part.Name = name
-                part.Parent = workspace
-                return part
-            end
-
-            table.insert(parts, createPart(startPosition + Vector3.new(x * partSize, 0, z * partSize), "Part_Side_" .. x .. "_" .. z))
-            table.insert(parts, createPart(startPosition + Vector3.new(-x * partSize, 0, z * partSize), "Part_LeftRight_" .. x .. "_" .. z))
-            table.insert(parts, createPart(startPosition + Vector3.new(-x * partSize, 0, -z * partSize), "Part_UpLeft_" .. x .. "_" .. z))
-            table.insert(parts, createPart(startPosition + Vector3.new(x * partSize, 0, -z * partSize), "Part_UpRight_" .. x .. "_" .. z))
-        end
-    end
-end
-
-MainTab:AddSwitch("Anti AFK", function(state)
-    if state then
-        if getgenv().AntiAfkExecuted and thisoneissocoldww then 
-            getgenv().AntiAfkExecuted = false
-            getgenv().zamanbaslaticisi = false
-            pcall(function() game.CoreGui.thisoneissocoldww:Destroy() end)
-        end
-        getgenv().AntiAfkExecuted = true
-
-        local thisoneissocoldww = Instance.new("ScreenGui")
-        local madebybloodofbatus = Instance.new("Frame")
-        local UICornerw = Instance.new("UICorner")
-        local DestroyButton = Instance.new("TextButton")
-        local uselesslabelone = Instance.new("TextLabel")
-        local timerlabel = Instance.new("TextLabel")
-        local uselesslabeltwo = Instance.new("TextLabel")
-        local fpslabel = Instance.new("TextLabel")
-        local uselesslabelthree = Instance.new("TextLabel")
-        local pinglabel = Instance.new("TextLabel")
-        local uselessframeone = Instance.new("Frame")
-        local UICornerww = Instance.new("UICorner")
-        local uselesslabelfour = Instance.new("TextLabel")
-
-        thisoneissocoldww.Name = "thisoneissocoldww"
-        pcall(function() thisoneissocoldww.Parent = game.CoreGui end)
-        thisoneissocoldww.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-
-        madebybloodofbatus.Name = "madebybloodofbatus"
-        madebybloodofbatus.Parent = thisoneissocoldww
-        madebybloodofbatus.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-        madebybloodofbatus.Position = UDim2.new(0.085,0,0.13,0)
-        madebybloodofbatus.Size = UDim2.new(0,225,0,96)
-        UICornerw.Parent = madebybloodofbatus
-
-        DestroyButton.Name = "DestroyButton"
-        DestroyButton.Parent = madebybloodofbatus
-        DestroyButton.BackgroundTransparency = 1
-        DestroyButton.Position = UDim2.new(0.87,0,0.02,0)
-        DestroyButton.Size = UDim2.new(0,27,0,15)
-        DestroyButton.Font = Enum.Font.SourceSans
-        DestroyButton.Text = "X"
-        DestroyButton.TextColor3 = Color3.fromRGB(255,255,255)
-        DestroyButton.TextSize = 14
-        DestroyButton.MouseButton1Click:Connect(function()
-            getgenv().AntiAfkExecuted = false
-            task.wait(0.1)
-            thisoneissocoldww:Destroy()
-        end)
-
-        uselesslabelone.Parent = madebybloodofbatus
-        uselesslabelone.BackgroundTransparency = 1
-        uselesslabelone.Position = UDim2.new(0.3,0,0,0)
-        uselesslabelone.Size = UDim2.new(0,95,0,24)
-        uselesslabelone.Font = Enum.Font.SourceSans
-        uselesslabelone.Text = "Anti Afk"
-        uselesslabelone.TextColor3 = Color3.fromRGB(255,255,255)
-        uselesslabelone.TextSize = 14
-
-        timerlabel.Parent = madebybloodofbatus
-        timerlabel.BackgroundTransparency = 1
-        timerlabel.Position = UDim2.new(0.65,0,0.68,0)
-        timerlabel.Size = UDim2.new(0,60,0,24)
-        timerlabel.Font = Enum.Font.SourceSans
-        timerlabel.Text = "0:0:0"
-        timerlabel.TextColor3 = Color3.fromRGB(255,255,255)
-        timerlabel.TextSize = 14
-
-        uselesslabeltwo.Parent = madebybloodofbatus
-        uselesslabeltwo.BackgroundTransparency = 1
-        uselesslabeltwo.Position = UDim2.new(0.03,0,0.37,0)
-        uselesslabeltwo.Size = UDim2.new(0,29,0,24)
-        uselesslabeltwo.Font = Enum.Font.SourceSans
-        uselesslabeltwo.Text = "Ping: "
-        uselesslabeltwo.TextColor3 = Color3.fromRGB(255,255,255)
-        uselesslabeltwo.TextSize = 14
-
-        fpslabel.Parent = madebybloodofbatus
-        fpslabel.BackgroundTransparency = 1
-        fpslabel.Position = UDim2.new(0.72,0,0.35,0)
-        fpslabel.Size = UDim2.new(0,55,0,24)
-        fpslabel.Font = Enum.Font.SourceSans
-        fpslabel.Text = "0"
-        fpslabel.TextColor3 = Color3.fromRGB(255,255,255)
-        fpslabel.TextSize = 14
-
-        uselesslabelthree.Parent = madebybloodofbatus
-        uselesslabelthree.BackgroundTransparency = 1
-        uselesslabelthree.Position = UDim2.new(0.5,0,0.35,0)
-        uselesslabelthree.Size = UDim2.new(0,26,0,24)
-        uselesslabelthree.Font = Enum.Font.SourceSans
-        uselesslabelthree.Text = "Fps: "
-        uselesslabelthree.TextColor3 = Color3.fromRGB(255,255,255)
-        uselesslabelthree.TextSize = 14
-
-        pinglabel.Parent = madebybloodofbatus
-        pinglabel.BackgroundTransparency = 1
-        pinglabel.Position = UDim2.new(0.2,0,0.37,0)
-        pinglabel.Size = UDim2.new(0,55,0,24)
-        pinglabel.Font = Enum.Font.SourceSans
-        pinglabel.Text = "0"
-        pinglabel.TextColor3 = Color3.fromRGB(255,255,255)
-        pinglabel.TextSize = 14
-        pinglabel.TextWrapped = true
-
-        uselessframeone.Parent = madebybloodofbatus
-        uselessframeone.BackgroundColor3 = Color3.fromRGB(255,255,255)
-        uselessframeone.Position = UDim2.new(0.004,0,0.24,0)
-        uselessframeone.Size = UDim2.new(0,224,0,5)
-        UICornerww.CornerRadius = UDim.new(0,50)
-        UICornerww.Parent = uselessframeone
-
-        uselesslabelfour.Parent = madebybloodofbatus
-        uselesslabelfour.BackgroundTransparency = 1
-        uselesslabelfour.Position = UDim2.new(0.05,0,0.81,0)
-        uselesslabelfour.Size = UDim2.new(0,95,0,12)
-        uselesslabelfour.Font = Enum.Font.SourceSans
-        uselesslabelfour.Text = "Anti-Afk Auto Enabled"
-        uselesslabelfour.TextColor3 = Color3.fromRGB(255,255,255)
-        uselesslabelfour.TextSize = 14
-
-        local Drag = madebybloodofbatus
-        local gsTween = game:GetService("TweenService")
-        local UserInputService = game:GetService("UserInputService")
-        local dragging, dragInput, dragStart, startPos
-        local function update(input)
-            local delta = input.Position - dragStart
-            local dragTime = 0.04
-            local SmoothDrag = {}
-            SmoothDrag.Position = UDim2.new(startPos.X.Scale,startPos.X.Offset+delta.X,startPos.Y.Scale,startPos.Y.Offset+delta.Y)
-            gsTween:Create(Drag,TweenInfo.new(dragTime,Enum.EasingStyle.Sine,Enum.EasingDirection.InOut),SmoothDrag):Play()
-        end
-        Drag.InputBegan:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                dragging = true
-                dragStart = input.Position
-                startPos = Drag.Position
-                input.Changed:Connect(function()
-                    if input.UserInputState == Enum.UserInputState.End then dragging = false end
-                end)
-            end
-        end)
-        Drag.InputChanged:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-                dragInput = input
-            end
-        end)
-        UserInputService.InputChanged:Connect(function(input)
-            if input == dragInput and dragging then update(input) end
-        end)
-
-        local vu = game:GetService('VirtualUser')
-        game.Players.LocalPlayer.Idled:Connect(function()
-            vu:CaptureController()
-            vu:ClickButton2(Vector2.new())
-        end)
-
-        local RunService = game:GetService("RunService")
-        local sec = tick()
-        local FPS = {}
-        RunService.RenderStepped:Connect(function()
-            local fr = tick()
-            for i=#FPS,1,-1 do FPS[i+1] = (FPS[i]>=fr-1) and FPS[i] or nil end
-            FPS[1] = fr
-            local fps = math.floor((tick()-sec>=1 and #FPS) or (#FPS/(tick()-sec)))
-            fpslabel.Text = fps
-        end)
-
-        task.spawn(function()
-            while getgenv().AntiAfkExecuted do
-                task.wait(1)
-                local success, ping = pcall(function()
-                    return math.floor(tonumber(game:GetService("Stats"):FindFirstChild("PerformanceStats").Ping:GetValue()))
-                end)
-                pinglabel.Text = success and ping or 0
-            end
-        end)
-
-        local saniye, dakika, saat = 0,0,0
-        getgenv().zamanbaslaticisi = true
-        task.spawn(function()
-            while getgenv().zamanbaslaticisi do
-                saniye = saniye + 1
-                task.wait(1)
-                if saniye>=60 then saniye=0;dakika=dakika+1 end
-                if dakika>=60 then dakika=0;saat=saat+1 end
-                timerlabel.Text = saat..":"..dakika..":"..saniye
-            end
-        end)
-    else
-        getgenv().AntiAfkExecuted = false
-        getgenv().zamanbaslaticisi = false
-        pcall(function()
-            if game.CoreGui:FindFirstChild("thisoneissocoldww") then
-                game.CoreGui.thisoneissocoldww:Destroy()
-            end
-        end)
-    end
-end)
-
-task.spawn(createAllParts)
-
-local walkonwaterSwicth = MainTab:AddSwitch("Walk on Water", function(bool)
-    for _, part in ipairs(parts) do
-        if part and part.Parent then
-            part.CanCollide = bool
-        end
-    end
-end)
-
-local timeDropdown = MainTab:AddDropdown("Change Time", function(selection)
-    local lighting = game:GetService("Lighting")
-
-    if selection == "Night" then
-        lighting.ClockTime = 0
-    elseif selection == "Day" then
-        lighting.ClockTime = 12
-    elseif selection == "Midnight" then
-        lighting.ClockTime = 6
-    end
-end)
-
-timeDropdown:Add("Night")
-timeDropdown:Add("Day")
-timeDropdown:Add("Midnight")
-
--- Pestaña Farm Op
-local AutoFarm = window:AddTab("Farm Op")
-
-getgenv()._AutoRepFarmEnabled = false  
-
-AutoFarm:AddSwitch("Strength Op", function(state)
-    getgenv()._AutoRepFarmEnabled = state
-end)
-
-local REPS_PER_CYCLE = 55
-local MAX_PING = 5000  
-local MIN_PING = 300
-
-local function getPing()
-    local success, ping = pcall(function()
-        return Stats.Network.ServerStatsItem["Data Ping"]:GetValue()
-    end)
-    return success and ping or 999
-end
-
-task.spawn(function()
-    local farmingPaused = false
-
-    while true do
-        if getgenv()._AutoRepFarmEnabled then
-            local ping = getPing()
-
-            if ping > MAX_PING then
-                farmingPaused = true
-            end
-
-            if ping <= MIN_PING then
-                farmingPaused = false
-            end
-
-            if not farmingPaused and LocalPlayer:FindFirstChild("muscleEvent") then
-                for i = 1, REPS_PER_CYCLE do
-                    LocalPlayer.muscleEvent:FireServer("rep")
-                end
-            end
-        end
-
-        task.wait()
-    end
-end)
-
-local autoEatEnabled = false
-
-AutoFarm:AddSwitch("Auto Eat Egg 30 Minuts", function(state)
-    autoEatEnabled = state
-end)
-
-local function eatProteinEgg()
-    local backpack = LocalPlayer:WaitForChild("Backpack")
-    local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-    local muscleEvent = LocalPlayer:WaitForChild("muscleEvent")
-
-    local egg = backpack:FindFirstChild("Protein Egg") or character:FindFirstChild("Protein Egg")
-    
-    if egg then
-        if egg.Parent == backpack then
-            egg.Parent = character
-        end
-        task.wait(0.1)
-
-        pcall(function()
-            muscleEvent:FireServer("proteinEgg", egg)
-        end)
-    end
-end
-
-local rEvents = ReplicatedStorage:WaitForChild("rEvents")
-local hatchEvent = rEvents:WaitForChild("exclusiveEggHatchEvent")
-
-hatchEvent.OnClientEvent:Connect(function(data)
-    if type(data) == "table" and data.SessionId then
-        task.spawn(function()
-            local revealEvent = rEvents:FindFirstChild("exclusiveEggRevealCompleteEvent")
-            if revealEvent and revealEvent:IsA("RemoteEvent") then
-                revealEvent:FireServer(data.SessionId)
-            end
-        end)
-    end
-end)
-
-task.spawn(function()
-    local lastEatTime = 0
-    while true do
-        if autoEatEnabled then
-            local currentTime = tick()
-            if currentTime - lastEatTime >= 1800 or lastEatTime == 0 then
-                eatProteinEgg()
-                lastEatTime = currentTime
-            end
+StatsTab:AddButton("Calcular Fuerza Requerida", function()
+    local target = tonumber(TargetRebirthBox.Text)
+    if target then
+        -- En Muscle Legends la fórmula base requiere 10,000 de fuerza * (Rebirths + 1)
+        local currentRebirths = LocalPlayer.leaderstats and LocalPlayer.leaderstats.Rebirths and LocalPlayer.leaderstats.Rebirths.Value or 0
+        if target <= currentRebirths then
+            CalcResultLabel.Text = "Resultado: ¡Ya alcanzaste este objetivo!"
         else
-            lastEatTime = 0
-        end
-        task.wait(1)
-    end
-end)
-
-_G.AutoSpinWheel = false
-
-AutoFarm:AddSwitch("Spin Fortune Wheel", function(state)
-    _G.AutoSpinWheel = state
-
-    if state then
-        task.spawn(function()
-            local remote = rEvents:WaitForChild("openFortuneWheelRemote")
-            local chances
-            pcall(function()
-                chances = ReplicatedStorage:WaitForChild("shared"):WaitForChild("catalogs"):WaitForChild("fortuneWheelChances"):WaitForChild("Fortune Wheel")
-            end)
-
-            while _G.AutoSpinWheel do
-                pcall(function()
-                    if remote and chances then
-                        remote:InvokeServer("openFortuneWheel", chances)
-                    end
-                end)
-                task.wait(0.5)
+            local totalReq = 0
+            for i = currentRebirths, target - 1 do
+                totalReq = totalReq + (10000 * (i + 1))
             end
-        end)
-    end
-end)
-
-AutoFarm:AddSwitch("Hide All Frames", function(state)
-    local rSto = game:GetService("ReplicatedStorage")
-
-    for _, obj in pairs(rSto:GetDescendants()) do
-        if obj:IsA("GuiObject") and obj.Name:match("Frame$") then
-            obj.Visible = not state
+            CalcResultLabel.Text = string.format("Fuerza Necesaria: %s", tostring(totalReq))
         end
-    end
-
-    if state then
-        if _G.HideFramesConn then
-            _G.HideFramesConn:Disconnect()
-        end
-        _G.HideFramesConn = rSto.DescendantAdded:Connect(function(obj)
-            if obj:IsA("GuiObject") and obj.Name:match("Frame$") then
-                obj.Visible = false
-            end
-        end)
     else
-        if _G.HideFramesConn then
-            _G.HideFramesConn:Disconnect()
-            _G.HideFramesConn = nil
-        end
-        for _, obj in pairs(rSto:GetDescendants()) do
-            if obj:IsA("GuiObject") and obj.Name:match("Frame$") then
-                obj.Visible = true
-            end
-        end
+        CalcResultLabel.Text = "Resultado: Número inválido"
     end
 end)
 
-AutoFarm:AddButton("Anti Lag", function()
-    for _, v in pairs(game:GetDescendants()) do
-        if v:IsA("ParticleEmitter") or v:IsA("Smoke") or v:IsA("Fire") or v:IsA("Sparkles") then
-            pcall(function() v.Enabled = false end)
-        end
-    end
- 
-    local lighting = game:GetService("Lighting")
-    lighting.GlobalShadows = false
-    lighting.FogEnd = 9e9
-    lighting.Brightness = 0
- 
-    settings().Rendering.QualityLevel = 1
- 
-    for _, v in pairs(game:GetDescendants()) do
-        pcall(function()
-            if v:IsA("Decal") or v:IsA("Texture") then
-                v.Transparency = 1
-            elseif v:IsA("BasePart") and not v:IsA("MeshPart") then
-                v.Material = Enum.Material.SmoothPlastic
-                if v.Parent and (v.Parent:FindFirstChild("Humanoid") or v.Parent.Parent:FindFirstChild("Humanoid")) then
-                else
-                    v.Reflectance = 0
-                end
-            end
-        end)
-    end
- 
-    for _, v in pairs(lighting:GetChildren()) do
-        if v:IsA("BlurEffect") or v:IsA("SunRaysEffect") or v:IsA("ColorCorrectionEffect") or v:IsA("BloomEffect") or v:IsA("DepthOfFieldEffect") then
-            v.Enabled = false
-        end
-    end
- 
-    game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title = "anti lag activado",
-        Text = "Full optimization applied!",
-        Duration = 5
-    })
+
+-- 3. PESTAÑA DE AJUSTES & AFK
+local SettingsTab = Window:AddTab("Ajustes")
+
+SettingsTab:AddLabel("--- Protección ---")
+
+SettingsTab:AddSwitch("Anti AFK (Desconexión)", function(state)
+    Config.AntiAFK = state
 end)
 
-AutoFarm:AddButton("Full Optimization", function()
-    local playerGui = LocalPlayer:WaitForChild("PlayerGui")
-    local lighting = game:GetService("Lighting")
-
-    for _, gui in pairs(playerGui:GetChildren()) do
-        if gui:IsA("ScreenGui") then
-            gui:Destroy()
-        end
-    end
-
-    local function darkenSky()
-        for _, v in pairs(lighting:GetChildren()) do
-            if v:IsA("Sky") then
-                v:Destroy()
-            end
-        end
-
-        local darkSky = Instance.new("Sky")
-        darkSky.Name = "DarkSky"
-        darkSky.SkyboxBk = "rbxassetid://0"
-        darkSky.SkyboxDn = "rbxassetid://0"
-        darkSky.SkyboxFt = "rbxassetid://0"
-        darkSky.SkyboxLf = "rbxassetid://0"
-        darkSky.SkyboxRt = "rbxassetid://0"
-        darkSky.SkyboxUp = "rbxassetid://0"
-        darkSky.Parent = lighting
-
-        lighting.Brightness = 0
-        lighting.ClockTime = 0
-        lighting.TimeOfDay = "00:00:00"
-        lighting.OutdoorAmbient = Color3.new(0, 0, 0)
-        lighting.Ambient = Color3.new(0, 0, 0)
-        lighting.FogColor = Color3.new(0, 0, 0)
-        lighting.FogEnd = 100
-    end
-
-    local function removeParticleEffects()
-        for _, obj in pairs(workspace:GetDescendants()) do
-            if obj:IsA("ParticleEmitter") then
-                obj:Destroy()
-            end
-        end
-    end
-
-    local function removeLightSources()
-        for _, obj in pairs(workspace:GetDescendants()) do
-            if obj:IsA("PointLight") or obj:IsA("SpotLight") or obj:IsA("SurfaceLight") then
-                obj:Destroy()
-            end
-        end
-    end
-
-    removeParticleEffects()
-    removeLightSources()
-    darkenSky()
+SettingsTab:AddButton("Cerrar Script / UI", function()
+    Library:Unload()
 end)
 
-AutoFarm:AddButton("Equip Swift Samurai", function()
-    local petsFolder = LocalPlayer:FindFirstChild("petsFolder")
-    if not petsFolder then return end
-    local equipEvent = rEvents:FindFirstChild("equipPetEvent")
 
-    for _, folder in pairs(petsFolder:GetChildren()) do
-        if folder:IsA("Folder") then
-            for _, pet in pairs(folder:GetChildren()) do
-                pcall(function() equipEvent:FireServer("unequipPet", pet) end)
-            end
-        end
-    end
-    task.wait(0.1)
+-- ==========================================
+-- LÓGICA / LOOPS DEL SCRIPT
+-- ==========================================
 
-    local equipped = 0
-    local maxEquip = 8
-    for _, folder in pairs(petsFolder:GetChildren()) do
-        if folder:IsA("Folder") then
-            for _, pet in pairs(folder:GetChildren()) do
-                if pet.Name == "Swift Samurai" then
-                    pcall(function() equipEvent:FireServer("equipPet", pet) end)
-                    equipped += 1
-                    if equipped >= maxEquip then
-                        return 
-                    end
-                end
-            end
-        end
-    end
-end)
-
-AutoFarm:AddButton("Jungle Squat", function()
-    local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-    local hrp = char:WaitForChild("HumanoidRootPart")
-
-    hrp.CFrame = CFrame.new(-8371.4336, 6.7981, 2858.8853)
-    task.wait(0.2)
-
-    pcall(function()
-        VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.E, false, game)
-        task.wait(0.05)
-        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.E, false, game)
-    end)
-end)
-
-AutoFarm:AddButton("Industrial Squat", function()
-    local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-    local hrp = char:WaitForChild("HumanoidRootPart")
-
-    hrp.CFrame = CFrame.new(-5217.11523, 61.056282, 5418.07715, 1, 0, 0, 0, 1, 0, 0, 0, 1) + Vector3.new(0, 3, 0)
-    task.wait(0.2)
-
-    pcall(function()
-        VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.E, false, game)
-        task.wait(0.05)
-        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.E, false, game)
-    end)
-end)
-
-AutoFarm:AddButton("Jungle lift", function()
-    local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-    local hrp = char:WaitForChild("HumanoidRootPart")
-    
-    hrp.CFrame = CFrame.new(-8652.8672, 29.2667, 2089.2617)
-    task.wait(0.2)
-
-    pcall(function()
-        VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.E, false, game)
-        task.wait(0.05)
-        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.E, false, game)
-    end)
-end)
-
-AutoFarm:AddButton("Industrial lift", function()
-    local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-    local hrp = char:WaitForChild("HumanoidRootPart")
-
-    hrp.CFrame = CFrame.new(-5492.69824, 61.056282, 4643.6499, 0.813733459, -3.26025003e-08, 0.58123821, 1.21058275e-08, 1, 3.91433019e-08, -0.58123821, -2.48158454e-08, 0.813733459)
-    task.wait(0.2)
-
-    pcall(function()
-        VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.E, false, game)
-        task.wait(0.05)
-        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.E, false, game)
-    end)
-end)
-
-local fastStrengthFolder = AutoFarm:AddFolder("Funciones de Renacimiento Rápido")
-
-local leaderstats = LocalPlayer:WaitForChild("leaderstats")
-local strengthStat = leaderstats:WaitForChild("Strength")
-local rebirthsStat = leaderstats:WaitForChild("Rebirths")
-
-local FarmPet = "Swift Samurai"
-local RebirthPet = "Tribal Overlord"
-
-local function formatNumber(number)
-    local suffixes = {
-        {1e15, "Qa"}, {1e12, "T"}, {1e9, "B"}, {1e6, "M"}, {1e3, "K"}
-    }
-    for _, suffix in ipairs(suffixes) do
-        if math.abs(number) >= suffix[1] then
-            return string.format("%.2f%s", number / suffix[1], suffix[2])
-        end
-    end
-    return tostring(math.floor(number))
-end
-
-local uptimeLabel = fastStrengthFolder:AddLabel("Tiempo Activo: 0d 0h 0m 0s")
-local paceLabel = fastStrengthFolder:AddLabel("Ritmo: 0 / Hora | 0 / Día | 0 / Sem.")
-local avgPaceLabel = fastStrengthFolder:AddLabel("Promedio: 0 / Hora | 0 / Día | 0 / Sem.")
-
--- PARCHE COMPLETO DE COMPATIBILIDAD PARA XENO EXECUTOR
+-- Loop Fast Rep
 task.spawn(function()
-    task.wait(0.5)
-    local coreGui = (gethui and gethui()) or game:GetService("CoreGui")
-    local ui = coreGui:FindFirstChild("SoloLevelingUI")
-    
-    if ui then
-        -- 1. Reparar la barra superior de pestañas (revela los botones transparentes o sin texto)
-        local mainFrame = ui:FindFirstChild("MainFrame")
-        if mainFrame then
-            for _, child in pairs(mainFrame:GetDescendants()) do
-                if child:IsA("TextButton") and child.Parent and child.Parent.Name == "TabBar" then
-                    child.TextColor3 = Color3.fromRGB(255, 255, 255)
-                    child.BackgroundTransparency = 0
-                    child.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
+    while task.wait() do
+        if Config.FastRep and LocalPlayer.Character then
+            local tool = LocalPlayer.Backpack:FindFirstChild(Config.SelectedTool) or LocalPlayer.Character:FindFirstChild(Config.SelectedTool)
+            if tool then
+                if tool.Parent == LocalPlayer.Backpack then
+                    LocalPlayer.Character.Humanoid:EquipTool(tool)
                 end
+                tool:Activate()
             end
         end
+    end
+end)
 
-        -- 2. Reparar todos los ScrollingFrames y forzar el cálculo dinámico de altura (CanvasSize)
-        local function fixScrolls()
-            for _, scroller in pairs(ui:GetDescendants()) do
-                if scroller:IsA("ScrollingFrame") then
-                    scroller.ScrollingEnabled = true
-                    scroller.ScrollBarThickness = 6
-                    scroller.ScrollBarImageColor3 = Color3.fromRGB(255, 0, 0)
-                    
-                    local layout = scroller:FindFirstChildOfClass("UIListLayout")
-                    if layout then
-                        local function updateCanvas()
-                            local totalHeight = layout.AbsoluteContentSize.Y + 80
-                            
-                            -- Si hay carpetas abiertas dentro del scroll, sumar la altura de sus elementos hijos
-                            for _, child in pairs(scroller:GetChildren()) do
-                                if child:IsA("Frame") and child.ClipsDescendants then
-                                    local subLayout = child:FindFirstChildOfClass("UIListLayout", true)
-                                    if subLayout then
-                                        totalHeight = totalHeight + subLayout.AbsoluteContentSize.Y
-                                    end
-                                end
-                            end
-                            
-                            scroller.CanvasSize = UDim2.new(0, 0, 0, totalHeight)
-                        end
-                        
-                        layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(updateCanvas)
-                        updateCanvas()
-                    end
-                end
+-- Loop Auto Rebirth
+task.spawn(function()
+    while task.wait(0.5) do
+        if Config.AutoRebirth then
+            local rebirthEvent = game:GetService("ReplicatedStorage"):FindFirstChild("rEvents") 
+                and game:GetService("ReplicatedStorage").rEvents:FindFirstChild("rebirthRemote")
+            
+            if rebirthEvent then
+                rebirthEvent:InvokeServer("rebirthRequest")
             end
         end
+    end
+end)
 
-        fixScrolls()
+-- Anti AFK
+LocalPlayer.Idled:Connect(function()
+    if Config.AntiAFK then
+        VirtualUser:CaptureController()
+        VirtualUser:ClickButton2(Vector2.new(0, 0))
+    end
+end)
+
+-- Actualización en tiempo real de Estadísticas en la UI
+task.spawn(function()
+    while task.wait(1) do
+        if LocalPlayer:FindFirstChild("leaderstats") then
+            local leaderstats = LocalPlayer.leaderstats
+            
+            if leaderstats:FindFirstChild("Strength") then
+                StrengthLabel.Text = "Fuerza: " .. tostring(leaderstats.Strength.Value)
+            end
+            if leaderstats:FindFirstChild("Rebirths") then
+                RebirthsLabel.Text = "Rebirths: " .. tostring(leaderstats.Rebirths.Value)
+            end
+        end
         
-        -- Detectar clics o aperturas de carpetas para recalcular el tamaño al instante
-        for _, btn in pairs(ui:GetDescendants()) do
-            if btn:IsA("TextButton") then
-                btn.MouseButton1Click:Connect(function()
-                    task.wait(0.05)
-                    fixScrolls()
-                end)
+        -- Durabilidad y Agilidad a menudo están en carpetas de datos del jugador
+        if LocalPlayer:FindFirstChild("MuscleCustomization") or LocalPlayer:FindFirstChild("Agility") then
+            if LocalPlayer:FindFirstChild("Agility") then
+                AgilityLabel.Text = "Agilidad: " .. tostring(LocalPlayer.Agility.Value)
+            end
+            if LocalPlayer:FindFirstChild("Durability") then
+                DurabilityLabel.Text = "Durabilidad: " .. tostring(LocalPlayer.Durability.Value)
             end
         end
     end
