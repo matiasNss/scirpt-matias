@@ -1,32 +1,57 @@
 local Library = {}
 Library.Unloaded = false
 
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local VirtualUser = game:GetService("VirtualUser")
+local CoreGui = game:GetService("CoreGui")
+local LocalPlayer = Players.LocalPlayer
+
+-- Contenedor seguro compatible con Xeno
+local function GetParentGui()
+    if gethui then
+        local success, result = pcall(gethui)
+        if success and result then return result end
+    end
+    if CoreGui:FindFirstChild("RobloxGui") then
+        return CoreGui
+    end
+    return LocalPlayer:WaitForChild("PlayerGui")
+end
+
+local ParentGui = GetParentGui()
+
 -- Eliminar ejecuciones anteriores
 do
-    local coreGui = (gethui and gethui()) or game:GetService("CoreGui")
-    if coreGui:FindFirstChild("SoloLevelingUI") then
-        coreGui.SoloLevelingUI:Destroy()
+    if ParentGui:FindFirstChild("SoloLevelingUI") then
+        ParentGui.SoloLevelingUI:Destroy()
     end
 end
 
 -- ScreenGui Principal
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "SoloLevelingUI"
-ScreenGui.Parent = (gethui and gethui()) or game:GetService("CoreGui")
+ScreenGui.Parent = ParentGui
 ScreenGui.ResetOnSpawn = false
 ScreenGui.IgnoreGuiInset = true
 ScreenGui.DisplayOrder = 999999
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
-local UserInputService = game:GetService("UserInputService")
-local TweenService = game:GetService("TweenService")
+function Library:Unload()
+    if ScreenGui then
+        ScreenGui:Destroy()
+    end
+    Library.Unloaded = true
+end
 
 function Library:AddWindow(title, options)
     options = options or {}
     local windowTitle = title or "System Interface"
     local mainColor = options.main_color or Color3.fromRGB(255, 215, 0)
     
-    local viewport = workspace.CurrentCamera.ViewportSize
+    local viewport = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(800, 600)
     local winWidth = math.clamp(options.min_size and options.min_size.X or 450, 300, viewport.X - 40)
     local winHeight = math.clamp(options.min_size and options.min_size.Y or 350, 250, viewport.Y - 120)
 
@@ -195,10 +220,10 @@ function Library:AddWindow(title, options)
         PageList:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(updateCanvasSize)
 
         TabBtn.MouseButton1Click:Connect(function()
-            for _, child in pairs(TabContainer:GetChildren()) do
+            for _, child in ipairs(TabContainer:GetChildren()) do
                 if child:IsA("ScrollingFrame") then child.Visible = false end
             end
-            for _, child in pairs(TabBar:GetChildren()) do
+            for _, child in ipairs(TabBar:GetChildren()) do
                 if child:IsA("TextButton") then 
                     child.TextColor3 = Color3.fromRGB(150, 150, 150)
                     child.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
@@ -216,7 +241,7 @@ function Library:AddWindow(title, options)
             TabBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
         end
 
-        local function createElementLibrary(parentContainer, isFolderContainer)
+        local function createElementLibrary(parentContainer)
             local ContainerElements = {}
             local LayoutIndex = 1
 
@@ -247,7 +272,9 @@ function Library:AddWindow(title, options)
                 Btn.MouseButton1Click:Connect(function()
                     TweenService:Create(Btn, TweenInfo.new(0.1), {BackgroundColor3 = tabColor}):Play()
                     task.delay(0.1, function()
-                        TweenService:Create(Btn, TweenInfo.new(0.1), {BackgroundColor3 = Color3.fromRGB(28, 28, 38)}):Play()
+                        if Btn and Btn.Parent then
+                            TweenService:Create(Btn, TweenInfo.new(0.1), {BackgroundColor3 = Color3.fromRGB(28, 28, 38)}):Play()
+                        end
                     end)
                     pcall(callback)
                 end)
@@ -344,41 +371,6 @@ function Library:AddWindow(title, options)
                 return Label
             end
 
-            -- TextBox
-            function ContainerElements:AddTextBox(placeholder, callback)
-                callback = callback or function() end
-                local BoxFrame = Instance.new("Frame")
-                BoxFrame.Parent = parentContainer
-                BoxFrame.BackgroundColor3 = Color3.fromRGB(28, 28, 38)
-                BoxFrame.Size = UDim2.new(1, -5, 0, 32)
-                BoxFrame.LayoutOrder = LayoutIndex
-                LayoutIndex += 1
-                
-                local FrameCorner = Instance.new("UICorner")
-                FrameCorner.CornerRadius = UDim.new(0, 5)
-                FrameCorner.Parent = BoxFrame
-
-                local TextBox = Instance.new("TextBox")
-                TextBox.Parent = BoxFrame
-                TextBox.BackgroundTransparency = 1
-                TextBox.Size = UDim2.new(1, -10, 1, 0)
-                TextBox.Position = UDim2.new(0, 10, 0, 0)
-                TextBox.Font = Enum.Font.Gotham
-                TextBox.PlaceholderText = placeholder
-                TextBox.Text = ""
-                TextBox.TextColor3 = Color3.fromRGB(240, 240, 240)
-                TextBox.PlaceholderColor3 = Color3.fromRGB(120, 120, 120)
-                TextBox.TextSize = 13
-                TextBox.TextXAlignment = Enum.TextXAlignment.Left
-                TextBox.ClearTextOnFocus = false
-
-                TextBox.FocusLost:Connect(function()
-                    pcall(callback, TextBox.Text)
-                end)
-                updateCanvasSize()
-                return TextBox
-            end
-
             -- Dropdown
             function ContainerElements:AddDropdown(text, callback)
                 callback = callback or function() end
@@ -426,8 +418,10 @@ function Library:AddWindow(title, options)
                     isOpen = not isOpen
                     if isOpen then
                         DropdownFrame.Size = UDim2.new(1, -5, 0, 32 + (optionCount * 30))
+                        MainBtn.Text = text .. " ▲"
                     else
                         DropdownFrame.Size = UDim2.new(1, -5, 0, 32)
+                        MainBtn.Text = text .. " ▼"
                     end
                     updateCanvasSize()
                 end
@@ -447,6 +441,7 @@ function Library:AddWindow(title, options)
                     OptBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
                     OptBtn.TextSize = 12
                     OptBtn.TextXAlignment = Enum.TextXAlignment.Left
+                    OptBtn.LayoutOrder = optionCount
 
                     local OptPadding = Instance.new("UIPadding")
                     OptPadding.PaddingLeft = UDim.new(0, 10)
@@ -457,97 +452,216 @@ function Library:AddWindow(title, options)
                     OptCorner.Parent = OptBtn
 
                     OptBtn.MouseButton1Click:Connect(function()
-                        MainBtn.Text = text .. ": " .. optionText .. " ▲"
-                        ToggleDropdown()
+                        MainBtn.Text = text .. ": " .. optionText .. " ▼"
+                        isOpen = false
+                        DropdownFrame.Size = UDim2.new(1, -5, 0, 32)
+                        updateCanvasSize()
                         pcall(callback, optionText)
                     end)
-                end
-
-                function DropdownMethods:Remove(optionText)
-                    for _, child in pairs(OptionContainer:GetChildren()) do
-                        if child:IsA("TextButton") and child.Text:gsub("^%s*", "") == optionText then
-                            child:Destroy()
-                            optionCount = math.max(0, optionCount - 1)
-                            if isOpen then
-                                DropdownFrame.Size = UDim2.new(1, -5, 0, 32 + (optionCount * 30))
-                            end
-                            updateCanvasSize()
-                            break
-                        end
-                    end
+                    updateCanvasSize()
                 end
 
                 updateCanvasSize()
                 return DropdownMethods
             end
 
-            -- Soporte para Folders
-            function ContainerElements:AddFolder(folderName)
-                local FolderFrame = Instance.new("Frame")
-                FolderFrame.Parent = parentContainer
-                FolderFrame.BackgroundColor3 = Color3.fromRGB(22, 22, 30)
-                FolderFrame.Size = UDim2.new(1, -5, 0, 32)
-                FolderFrame.ClipsDescendants = true
-                FolderFrame.LayoutOrder = LayoutIndex
-                LayoutIndex += 1
-
-                local FolderCorner = Instance.new("UICorner")
-                FolderCorner.CornerRadius = UDim.new(0, 5)
-                FolderCorner.Parent = FolderFrame
-
-                local FolderBtn = Instance.new("TextButton")
-                FolderBtn.Parent = FolderFrame
-                FolderBtn.BackgroundTransparency = 1
-                FolderBtn.Size = UDim2.new(1, 0, 0, 32)
-                FolderBtn.Font = Enum.Font.GothamBold
-                FolderBtn.Text = "  > " .. folderName
-                FolderBtn.TextColor3 = tabColor
-                FolderBtn.TextSize = 13
-                FolderBtn.TextXAlignment = Enum.TextXAlignment.Left
-
-                local FolderContent = Instance.new("Frame")
-                FolderContent.Parent = FolderFrame
-                FolderContent.BackgroundTransparency = 1
-                FolderContent.Position = UDim2.new(0, 10, 0, 35)
-                FolderContent.Size = UDim2.new(1, -20, 1, -35)
-
-                local FolderList = Instance.new("UIListLayout")
-                FolderList.Parent = FolderContent
-                FolderList.SortOrder = Enum.SortOrder.LayoutOrder
-                FolderList.Padding = UDim.new(0, 6)
-
-                local isFolderOpen = false
-
-                FolderBtn.MouseButton1Click:Connect(function()
-                    isFolderOpen = not isFolderOpen
-                    if isFolderOpen then
-                        FolderBtn.Text = "  v " .. folderName
-                        FolderFrame.Size = UDim2.new(1, -5, 0, FolderList.AbsoluteContentSize.Y + 45)
-                    else
-                        FolderBtn.Text = "  > " .. folderName
-                        FolderFrame.Size = UDim2.new(1, -5, 0, 32)
-                    end
-                    updateCanvasSize()
-                end)
-
-                FolderList:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-                    if isFolderOpen then
-                        FolderFrame.Size = UDim2.new(1, -5, 0, FolderList.AbsoluteContentSize.Y + 45)
-                        updateCanvasSize()
-                    end
-                end)
-
-                updateCanvasSize()
-                return createElementLibrary(FolderContent, true)
-            end
-
             return ContainerElements
         end
 
-        return createElementLibrary(PageScroller, false)
+        return createElementLibrary(PageScroller)
     end
 
     return WindowMethods
 end
+
+
+-- ==========================================
+-- LÓGICA DE MUSCLE LEGENDS & CALCULADORA
+-- ==========================================
+local Config = {
+    FastRep = false,
+    AutoRebirth = false,
+    AntiAFK = false,
+    SelectedTool = "Punch"
+}
+
+local sessionStartTime = tick()
+local initialStrength = 0
+local initialDurability = 0
+
+task.spawn(function()
+    task.wait(1)
+    if LocalPlayer:FindFirstChild("leaderstats") and LocalPlayer.leaderstats:FindFirstChild("Strength") then
+        initialStrength = LocalPlayer.leaderstats.Strength.Value
+    end
+    if LocalPlayer:FindFirstChild("Durability") then
+        initialDurability = LocalPlayer.Durability.Value
+    end
+end)
+
+local function formatValue(val)
+    if not val then return "0" end
+    if val >= 1e15 then
+        return string.format("%.2fQa", val / 1e15)
+    elseif val >= 1e12 then
+        return string.format("%.2fT", val / 1e12)
+    elseif val >= 1e9 then
+        return string.format("%.2fB", val / 1e9)
+    elseif val >= 1e6 then
+        return string.format("%.2fM", val / 1e6)
+    elseif val >= 1e3 then
+        return string.format("%.2fK", val / 1e3)
+    else
+        return tostring(math.floor(val))
+    end
+end
+
+local function formatTime(seconds)
+    local d = math.floor(seconds / 86400)
+    local h = math.floor((seconds % 86400) / 3600)
+    local m = math.floor((seconds % 3600) / 60)
+    local s = math.floor(seconds % 60)
+    return string.format("%dd %dh %dm %ds", d, h, m, s)
+end
+
+-- CREACIÓN DE LA VENTANA DE INTERFAZ
+local Window = Library:AddWindow("General.EMPI2.0 xeno // MatiasXIsotx", {
+    main_color = Color3.fromRGB(0, 170, 255),
+    min_size = Vector2.new(480, 420)
+})
+
+-- 1. PESTAÑA FARMING
+local FarmTab = Window:AddTab("Farm Rep")
+
+FarmTab:AddLabel("--- Auto Ejercicio (Fast Rep Ultra) ---")
+
+local ToolDropdown = FarmTab:AddDropdown("Herramienta", function(selected)
+    Config.SelectedTool = selected
+end)
+ToolDropdown:Add("Punch")
+ToolDropdown:Add("Weight")
+ToolDropdown:Add("Pushups")
+ToolDropdown:Add("Situps")
+
+FarmTab:AddSwitch("Fast Rep", function(state)
+    Config.FastRep = state
+end)
+
+FarmTab:AddLabel("--- Rebirth Automático ---")
+
+FarmTab:AddSwitch("Auto Rebirth", function(state)
+    Config.AutoRebirth = state
+end)
+
+-- 2. PESTAÑA CALCULADORA DE ESTADÍSTICAS
+local StatsTab = Window:AddTab("Calculadora de Estadísticas")
+
+local TimeElapsedLabel = StatsTab:AddLabel("Fast Rep Time: 0d 0h 0m 0s")
+
+StatsTab:AddLabel("--- Tasas de Ganancia Automática ---")
+local StrengthRateLabel = StatsTab:AddLabel("Strength Rate: 0/Hour | 0/Day | 0/Week")
+local DurabilityRateLabel = StatsTab:AddLabel("Durability Rate: 0/Hour | 0/Day | 0/Week")
+
+StatsTab:AddLabel("--- Tus Estadísticas Actuales ---")
+local StatsCurrentLabel = StatsTab:AddLabel("Stats: Fuerza: 0 | Durabilidad: 0")
+
+-- 3. PESTAÑA AJUSTES
+local SettingsTab = Window:AddTab("Ajustes")
+
+SettingsTab:AddLabel("--- Protección ---")
+
+SettingsTab:AddSwitch("Anti AFK", function(state)
+    Config.AntiAFK = state
+end)
+
+SettingsTab:AddButton("Cerrar Script / UI", function()
+    Library:Unload()
+end)
+
+-- ==========================================
+-- BUCLES DE FUNCIONAMIENTO
+-- ==========================================
+
+-- Fast Rep Ultrarrápido con RunService
+RunService.Heartbeat:Connect(function()
+    if Config.FastRep and LocalPlayer.Character then
+        local char = LocalPlayer.Character
+        local backpack = LocalPlayer.Backpack
+        local tool = backpack:FindFirstChild(Config.SelectedTool) or char:FindFirstChild(Config.SelectedTool)
+        
+        if tool then
+            if tool.Parent == backpack then
+                local humanoid = char:FindFirstChildOfClass("Humanoid")
+                if humanoid then
+                    humanoid:EquipTool(tool)
+                end
+            else
+                tool:Activate()
+            end
+        end
+    end
+end)
+
+-- Auto Rebirth
+task.spawn(function()
+    while task.wait(0.4) do
+        if Config.AutoRebirth then
+            local rebirthEvent = game:GetService("ReplicatedStorage"):FindFirstChild("rEvents") 
+                and game:GetService("ReplicatedStorage").rEvents:FindFirstChild("rebirthRemote")
+            
+            if rebirthEvent then
+                rebirthEvent:InvokeServer("rebirthRequest")
+            end
+        end
+    end
+end)
+
+-- Anti AFK
+LocalPlayer.Idled:Connect(function()
+    if Config.AntiAFK then
+        VirtualUser:CaptureController()
+        VirtualUser:ClickButton2(Vector2.new(0, 0))
+    end
+end)
+
+-- Bucle de Calculadora y Estadísticas en Vivo
+task.spawn(function()
+    while task.wait(1) do
+        local currentTime = tick()
+        local elapsedSeconds = currentTime - sessionStartTime
+        TimeElapsedLabel.Text = "Fast Rep Time: " .. formatTime(elapsedSeconds)
+        
+        local currentStrength = 0
+        local currentDurability = 0
+        
+        if LocalPlayer:FindFirstChild("leaderstats") and LocalPlayer.leaderstats:FindFirstChild("Strength") then
+            currentStrength = LocalPlayer.leaderstats.Strength.Value
+        end
+        if LocalPlayer:FindFirstChild("Durability") then
+            currentDurability = LocalPlayer.Durability.Value
+        end
+        
+        local gainedStrength = math.max(0, currentStrength - initialStrength)
+        local gainedDurability = math.max(0, currentDurability - initialDurability)
+        
+        if elapsedSeconds > 2 then
+            local strPerSec = gainedStrength / elapsedSeconds
+            local durPerSec = gainedDurability / elapsedSeconds
+            
+            local strHour = strPerSec * 3600
+            local strDay = strHour * 24
+            local strWeek = strDay * 7
+            
+            local durHour = durPerSec * 3600
+            local durDay = durHour * 24
+            local durWeek = durDay * 7
+            
+            StrengthRateLabel.Text = string.format("Strength Rate: %s/Hour | %s/Day | %s/Week", formatValue(strHour), formatValue(strDay), formatValue(strWeek))
+            DurabilityRateLabel.Text = string.format("Durability Rate: %s/Hour | %s/Day | %s/Week", formatValue(durHour), formatValue(durDay), formatValue(durWeek))
+        end
+        
+        StatsCurrentLabel.Text = string.format("Stats: Fuerza: %s | Durabilidad: %s", formatValue(currentStrength), formatValue(currentDurability))
+    end
+end)
 
 return Library
