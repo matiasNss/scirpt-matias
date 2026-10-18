@@ -524,8 +524,8 @@ local function formatTime(seconds)
     return string.format("%dd %dh %dm %ds", d, h, m, s)
 end
 
--- VENTANA PRINCIPAL
-local Window = Library:AddWindow("General.EMPI2.0 xeno // MatiasXIsotx", {
+-- VENTANA PRINCIPAL (Mxtias777 Hub)
+local Window = Library:AddWindow("Mxtias777 Hub", {
     main_color = Color3.fromRGB(0, 170, 255),
     min_size = Vector2.new(480, 420)
 })
