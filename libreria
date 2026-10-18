@@ -1,30 +1,13 @@
--- Auto Farm para Industrial Squat (Interactúa con la máquina y mantiene el entrenamiento)
-task.spawn(function()
-    while true do
-        task.wait(0.2)
-        if Config.AutoIndustrialSquat then
-            pcall(function()
-                local char = LocalPlayer.Character
-                if char and char:FindFirstChild("HumanoidRootPart") then
-                    -- Asegurar posición exacta por si el personaje se mueve
-                    char.HumanoidRootPart.CFrame = CFrame.new(-5217.11523, 61.056282, 5418.07715, 1, 0, 0, 0, 1, 0, 0, 0, 1) + Vector3.new(0, 3, 0)
-                    
-                    -- Buscar si hay algún Prompt de proximidad cercano en el workspace para forzarlo
-                    for _, obj in ipairs(workspace:GetDescendants()) do
-                        if obj:IsA("ProximityPrompt") and obj.Parent then
-                            local dist = (obj.Parent.Position - char.HumanoidRootPart.Position).Magnitude
-                            if dist < 12 then
-                                fireproximityprompt(obj)
-                            end
-                        end
-                    end
-                end
+AutoFarm:AddButton("Industrial lift", function()
+    local player = game.Players.LocalPlayer
+    local char = player.Character or player.CharacterAdded:Wait()
+    local hrp = char:WaitForChild("HumanoidRootPart")
 
-                -- Simular tecla E repetidamente por seguridad
-                VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.E, false, game)
-                task.wait(0.05)
-                VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.E, false, game)
-            end)
-        end
-    end
+    hrp.CFrame = CFrame.new(-5492.69824, 61.056282, 4643.6499, 0.813733459, -3.26025003e-08, 0.58123821, 1.21058275e-08, 1, 3.91433019e-08, -0.58123821, -2.48158454e-08, 0.813733459)
+    task.wait(0.2)
+
+    local VirtualInputManager = game:GetService("VirtualInputManager")
+    VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.E, false, game)
+    task.wait(0.05)
+    VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.E, false, game)
 end)
