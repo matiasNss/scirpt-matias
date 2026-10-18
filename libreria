@@ -1,6 +1,6 @@
 
 -- ========================================================
--- LIBRERÍA SOLO LEVELING (INTEGRADA)
+-- LIBRERÍA SOLO LEVELING (CORREGIDA - AUTO SCROLL & SIZE)
 -- ========================================================
 local Library = {}
 Library.Unloaded = false
@@ -29,8 +29,8 @@ function Library:AddWindow(title, options)
     local mainColor = options.main_color or Color3.fromRGB(255, 0, 0)
     
     local viewport = workspace.CurrentCamera.ViewportSize
-    local winWidth = math.clamp(options.min_size and options.min_size.X or 450, 300, viewport.X - 40)
-    local winHeight = math.clamp(options.min_size and options.min_size.Y or 350, 250, viewport.Y - 120)
+    local winWidth = math.clamp(options.min_size and options.min_size.X or 480, 300, viewport.X - 40)
+    local winHeight = math.clamp(options.min_size and options.min_size.Y or 500, 250, viewport.Y - 80)
 
     local MainFrame = Instance.new("Frame")
     MainFrame.Name = "MainFrame"
@@ -176,7 +176,7 @@ function Library:AddWindow(title, options)
         PageScroller.Size = UDim2.new(1, 0, 1, 0)
         PageScroller.Visible = false
         PageScroller.CanvasSize = UDim2.new(0, 0, 0, 0)
-        PageScroller.ScrollBarThickness = 3
+        PageScroller.ScrollBarThickness = 5
         PageScroller.ScrollBarImageColor3 = tabColor
 
         local PageList = Instance.new("UIListLayout")
@@ -185,7 +185,7 @@ function Library:AddWindow(title, options)
         PageList.Padding = UDim.new(0, 6)
 
         local function updateCanvasSize()
-            PageScroller.CanvasSize = UDim2.new(0, 0, 0, PageList.AbsoluteContentSize.Y + 20)
+            PageScroller.CanvasSize = UDim2.new(0, 0, 0, PageList.AbsoluteContentSize.Y + 25)
         end
 
         PageList:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(updateCanvasSize)
@@ -203,6 +203,7 @@ function Library:AddWindow(title, options)
             PageScroller.Visible = true
             TabBtn.TextColor3 = tabColor
             TabBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
+            updateCanvasSize()
         end)
 
         if FirstTab then
@@ -210,6 +211,7 @@ function Library:AddWindow(title, options)
             PageScroller.Visible = true
             TabBtn.TextColor3 = tabColor
             TabBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
+            updateCanvasSize()
         end
 
         local function createElementLibrary(parentContainer)
@@ -222,7 +224,7 @@ function Library:AddWindow(title, options)
                 Btn.Parent = parentContainer
                 Btn.BackgroundColor3 = Color3.fromRGB(28, 28, 38)
                 Btn.BorderSizePixel = 0
-                Btn.Size = UDim2.new(1, -5, 0, 32)
+                Btn.Size = UDim2.new(1, -10, 0, 32)
                 Btn.Font = Enum.Font.GothamBold
                 Btn.Text = btnText
                 Btn.TextColor3 = Color3.fromRGB(240, 240, 240)
@@ -246,7 +248,7 @@ function Library:AddWindow(title, options)
                     end)
                     pcall(callback)
                 end)
-                updateCanvasSize()
+                task.defer(updateCanvasSize)
                 return Btn
             end
 
@@ -257,7 +259,7 @@ function Library:AddWindow(title, options)
                 local ToggleFrame = Instance.new("Frame")
                 ToggleFrame.Parent = parentContainer
                 ToggleFrame.BackgroundColor3 = Color3.fromRGB(28, 28, 38)
-                ToggleFrame.Size = UDim2.new(1, -5, 0, 32)
+                ToggleFrame.Size = UDim2.new(1, -10, 0, 32)
                 ToggleFrame.LayoutOrder = LayoutIndex
                 LayoutIndex += 1
 
@@ -317,7 +319,7 @@ function Library:AddWindow(title, options)
                     UpdateVisuals()
                     pcall(callback, toggled)
                 end
-                updateCanvasSize()
+                task.defer(updateCanvasSize)
                 return setmetatable(ToggleMethods, {__index = ToggleFrame})
             end
 
@@ -331,15 +333,15 @@ function Library:AddWindow(title, options)
 end
 
 -- ==========================================================
--- CREACIÓN DE LA INTERFAZ (DISEÑO FOTO)
+-- CREACIÓN DE LA INTERFAZ CON TODO EL CONTENIDO
 -- ==========================================================
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local displayName = LocalPlayer.DisplayName or LocalPlayer.Name
 
-local window = Library:AddWindow("CesarXMxtias Hub| BIENVENID@ " .. string.upper(displayName), {
+local window = Library:AddWindow("CESARXMXTIAS HUB| BIENVENID@ " .. string.upper(displayName), {
     main_color = Color3.fromRGB(255, 0, 0),
-    min_size = Vector2.new(450, 350)
+    min_size = Vector2.new(480, 500)
 })
 
 -- Pestañas
@@ -358,7 +360,42 @@ MainTab:AddSwitch("Hide All Frames", function(state)
     end
 end)
 
--- Contenido de Pestaña Farm Op (Funciones para Muscle Legends)
+MainTab:AddSwitch("Anti Fling", function(bool)
+    local character = LocalPlayer.Character
+    if character and character:FindFirstChild("HumanoidRootPart") then
+        local rootPart = character.HumanoidRootPart
+        if bool then
+            local bodyVelocity = Instance.new("BodyVelocity")
+            bodyVelocity.Name = "AntiFlingVelocity"
+            bodyVelocity.MaxForce = Vector3.new(100000, 0, 100000)
+            bodyVelocity.Velocity = Vector3.zero
+            bodyVelocity.P = 1250
+            bodyVelocity.Parent = rootPart
+        else
+            local existing = rootPart:FindFirstChild("AntiFlingVelocity")
+            if existing then existing:Destroy() end
+        end
+    end
+end)
+
+MainTab:AddSwitch("Infinite Jump", function(bool)
+    _G.InfiniteJump = bool
+    if bool then
+        local UserInputService = game:GetService("UserInputService")
+        local Connection
+        Connection = UserInputService.JumpRequest:Connect(function()
+            if _G.InfiniteJump then
+                if LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
+                    LocalPlayer.Character:FindFirstChildOfClass("Humanoid"):ChangeState("Jumping")
+                end
+            else
+                Connection:Disconnect()
+            end
+        end)
+    end
+end)
+
+-- Contenido de Pestaña Farm Op
 FarmTab:AddButton("Anti Lag", function()
     for _, v in pairs(game:GetDescendants()) do
         if v:IsA("ParticleEmitter") or v:IsA("Smoke") or v:IsA("Fire") or v:IsA("Sparkles") then
