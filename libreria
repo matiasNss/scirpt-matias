@@ -1,7 +1,6 @@
 
-
 -- ========================================================
--- LIBRERÍA SOLO LEVELING (INTEGRADA Y ADAPTADA)
+-- LIBRERÍA SOLO LEVELING (INTEGRADA)
 -- ========================================================
 local Library = {}
 Library.Unloaded = false
@@ -27,7 +26,7 @@ local TweenService = game:GetService("TweenService")
 function Library:AddWindow(title, options)
     options = options or {}
     local windowTitle = title or "System Interface"
-    local mainColor = options.main_color or Color3.fromRGB(255, 215, 0)
+    local mainColor = options.main_color or Color3.fromRGB(255, 0, 0)
     
     local viewport = workspace.CurrentCamera.ViewportSize
     local winWidth = math.clamp(options.min_size and options.min_size.X or 450, 300, viewport.X - 40)
@@ -72,7 +71,7 @@ function Library:AddWindow(title, options)
     TitleText.Font = Enum.Font.GothamBold
     TitleText.Text = string.upper(windowTitle)
     TitleText.TextColor3 = mainColor
-    TitleText.TextSize = 14
+    TitleText.TextSize = 13
     TitleText.TextXAlignment = Enum.TextXAlignment.Left
 
     local ToggleBtn = Instance.new("TextButton")
@@ -110,6 +109,7 @@ function Library:AddWindow(title, options)
     TabContainer.Position = UDim2.new(0, 10, 0, 80)
     TabContainer.Size = UDim2.new(1, -20, 1, -90)
 
+    -- Mover ventana
     local dragging, dragStart, startPos
     TitleBar.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -134,6 +134,7 @@ function Library:AddWindow(title, options)
         end
     end)
 
+    -- Minimizar / Expandir
     local collapsed = false
     ToggleBtn.MouseButton1Click:Connect(function()
         collapsed = not collapsed
@@ -320,216 +321,6 @@ function Library:AddWindow(title, options)
                 return setmetatable(ToggleMethods, {__index = ToggleFrame})
             end
 
-            function ContainerElements:AddLabel(text)
-                local Label = Instance.new("TextLabel")
-                Label.Parent = parentContainer
-                Label.BackgroundTransparency = 1
-                Label.Size = UDim2.new(1, -5, 0, 24)
-                Label.Font = Enum.Font.GothamBold
-                Label.Text = text
-                Label.TextColor3 = Color3.fromRGB(240, 240, 240)
-                Label.TextSize = 14
-                Label.TextXAlignment = Enum.TextXAlignment.Left
-                Label.LayoutOrder = LayoutIndex
-                LayoutIndex += 1
-                updateCanvasSize()
-                return Label
-            end
-
-            function ContainerElements:AddTextBox(placeholder, callback)
-                callback = callback or function() end
-                local BoxFrame = Instance.new("Frame")
-                BoxFrame.Parent = parentContainer
-                BoxFrame.BackgroundColor3 = Color3.fromRGB(28, 28, 38)
-                BoxFrame.Size = UDim2.new(1, -5, 0, 32)
-                BoxFrame.LayoutOrder = LayoutIndex
-                LayoutIndex += 1
-                
-                local FrameCorner = Instance.new("UICorner")
-                FrameCorner.CornerRadius = UDim.new(0, 5)
-                FrameCorner.Parent = BoxFrame
-
-                local TextBox = Instance.new("TextBox")
-                TextBox.Parent = BoxFrame
-                TextBox.BackgroundTransparency = 1
-                TextBox.Size = UDim2.new(1, -10, 1, 0)
-                TextBox.Position = UDim2.new(0, 10, 0, 0)
-                TextBox.Font = Enum.Font.Gotham
-                TextBox.PlaceholderText = placeholder
-                TextBox.Text = ""
-                TextBox.TextColor3 = Color3.fromRGB(240, 240, 240)
-                TextBox.PlaceholderColor3 = Color3.fromRGB(120, 120, 120)
-                TextBox.TextSize = 13
-                TextBox.TextXAlignment = Enum.TextXAlignment.Left
-                TextBox.ClearTextOnFocus = false
-
-                TextBox.FocusLost:Connect(function()
-                    pcall(callback, TextBox.Text)
-                end)
-                updateCanvasSize()
-                return TextBox
-            end
-
-            function ContainerElements:AddDropdown(text, callback)
-                callback = callback or function() end
-                local DropdownFrame = Instance.new("Frame")
-                DropdownFrame.Parent = parentContainer
-                DropdownFrame.BackgroundColor3 = Color3.fromRGB(28, 28, 38)
-                DropdownFrame.Size = UDim2.new(1, -5, 0, 32)
-                DropdownFrame.ClipsDescendants = true
-                DropdownFrame.LayoutOrder = LayoutIndex
-                LayoutIndex += 1
-                
-                local FrameCorner = Instance.new("UICorner")
-                FrameCorner.CornerRadius = UDim.new(0, 5)
-                FrameCorner.Parent = DropdownFrame
-
-                local MainBtn = Instance.new("TextButton")
-                MainBtn.Parent = DropdownFrame
-                MainBtn.BackgroundTransparency = 1
-                MainBtn.Size = UDim2.new(1, 0, 0, 32)
-                MainBtn.Font = Enum.Font.Gotham
-                MainBtn.Text = text .. " ▼"
-                MainBtn.TextColor3 = Color3.fromRGB(220, 220, 220)
-                MainBtn.TextSize = 13
-                MainBtn.TextXAlignment = Enum.TextXAlignment.Left
-                
-                local Padding = Instance.new("UIPadding")
-                Padding.PaddingLeft = UDim.new(0, 10)
-                Padding.Parent = MainBtn
-
-                local OptionContainer = Instance.new("Frame")
-                OptionContainer.Parent = DropdownFrame
-                OptionContainer.BackgroundTransparency = 1
-                OptionContainer.Position = UDim2.new(0, 0, 0, 32)
-                OptionContainer.Size = UDim2.new(1, 0, 1, -32)
-
-                local OptionList = Instance.new("UIListLayout")
-                OptionList.Parent = OptionContainer
-                OptionList.SortOrder = Enum.SortOrder.LayoutOrder
-                OptionList.Padding = UDim.new(0, 2)
-
-                local isOpen = false
-                local optionCount = 0
-
-                local function ToggleDropdown()
-                    isOpen = not isOpen
-                    if isOpen then
-                        DropdownFrame.Size = UDim2.new(1, -5, 0, 32 + (optionCount * 30))
-                    else
-                        DropdownFrame.Size = UDim2.new(1, -5, 0, 32)
-                    end
-                    updateCanvasSize()
-                end
-
-                MainBtn.MouseButton1Click:Connect(ToggleDropdown)
-
-                local DropdownMethods = {}
-                function DropdownMethods:Add(optionText)
-                    optionCount += 1
-                    local OptBtn = Instance.new("TextButton")
-                    OptBtn.Parent = OptionContainer
-                    OptBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
-                    OptBtn.BorderSizePixel = 0
-                    OptBtn.Size = UDim2.new(1, -10, 0, 28)
-                    OptBtn.Font = Enum.Font.Gotham
-                    OptBtn.Text = optionText
-                    OptBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
-                    OptBtn.TextSize = 12
-                    OptBtn.TextXAlignment = Enum.TextXAlignment.Left
-
-                    local OptPadding = Instance.new("UIPadding")
-                    OptPadding.PaddingLeft = UDim.new(0, 10)
-                    OptPadding.Parent = OptBtn
-
-                    local OptCorner = Instance.new("UICorner")
-                    OptCorner.CornerRadius = UDim.new(0, 4)
-                    OptCorner.Parent = OptBtn
-
-                    OptBtn.MouseButton1Click:Connect(function()
-                        MainBtn.Text = text .. ": " .. optionText .. " ▲"
-                        ToggleDropdown()
-                        pcall(callback, optionText)
-                    end)
-                end
-
-                function DropdownMethods:Remove(optionText)
-                    for _, child in pairs(OptionContainer:GetChildren()) do
-                        if child:IsA("TextButton") and child.Text:gsub("^%s*", "") == optionText then
-                            child:Destroy()
-                            optionCount = math.max(0, optionCount - 1)
-                            if isOpen then
-                                DropdownFrame.Size = UDim2.new(1, -5, 0, 32 + (optionCount * 30))
-                            end
-                            updateCanvasSize()
-                            break
-                        end
-                    end
-                end
-
-                updateCanvasSize()
-                return DropdownMethods
-            end
-
-            function ContainerElements:AddFolder(folderName)
-                local FolderFrame = Instance.new("Frame")
-                FolderFrame.Parent = parentContainer
-                FolderFrame.BackgroundColor3 = Color3.fromRGB(22, 22, 30)
-                FolderFrame.Size = UDim2.new(1, -5, 0, 32)
-                FolderFrame.ClipsDescendants = true
-                FolderFrame.LayoutOrder = LayoutIndex
-                LayoutIndex += 1
-
-                local FolderCorner = Instance.new("UICorner")
-                FolderCorner.CornerRadius = UDim.new(0, 5)
-                FolderCorner.Parent = FolderFrame
-
-                local FolderBtn = Instance.new("TextButton")
-                FolderBtn.Parent = FolderFrame
-                FolderBtn.BackgroundTransparency = 1
-                FolderBtn.Size = UDim2.new(1, 0, 0, 32)
-                FolderBtn.Font = Enum.Font.GothamBold
-                FolderBtn.Text = "  > " .. folderName
-                FolderBtn.TextColor3 = tabColor
-                FolderBtn.TextSize = 13
-                FolderBtn.TextXAlignment = Enum.TextXAlignment.Left
-
-                local FolderContent = Instance.new("Frame")
-                FolderContent.Parent = FolderFrame
-                FolderContent.BackgroundTransparency = 1
-                FolderContent.Position = UDim2.new(0, 10, 0, 35)
-                FolderContent.Size = UDim2.new(1, -20, 1, -35)
-
-                local FolderList = Instance.new("UIListLayout")
-                FolderList.Parent = FolderContent
-                FolderList.SortOrder = Enum.SortOrder.LayoutOrder
-                FolderList.Padding = UDim.new(0, 6)
-
-                local isFolderOpen = false
-
-                FolderBtn.MouseButton1Click:Connect(function()
-                    isFolderOpen = not isFolderOpen
-                    if isFolderOpen then
-                        FolderBtn.Text = "  v " .. folderName
-                        FolderFrame.Size = UDim2.new(1, -5, 0, FolderList.AbsoluteContentSize.Y + 45)
-                    else
-                        FolderBtn.Text = "  > " .. folderName
-                        FolderFrame.Size = UDim2.new(1, -5, 0, 32)
-                    end
-                    updateCanvasSize()
-                end)
-
-                FolderList:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-                    if isFolderOpen then
-                        FolderFrame.Size = UDim2.new(1, -5, 0, FolderList.AbsoluteContentSize.Y + 45)
-                        updateCanvasSize()
-                    end
-                end)
-
-                updateCanvasSize()
-                return createElementLibrary(FolderContent)
-            end
-
             return ContainerElements
         end
 
@@ -539,31 +330,36 @@ function Library:AddWindow(title, options)
     return WindowMethods
 end
 
--- ========================================================
--- SCRIPT ADAPTADO SEGÚN LA IMAGEN
--- ========================================================
-local player = game.Players.LocalPlayer
-local displayName = player.DisplayName or player.Name
+-- ==========================================================
+-- CREACIÓN DE LA INTERFAZ (DISEÑO FOTO)
+-- ==========================================================
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local displayName = LocalPlayer.DisplayName or LocalPlayer.Name
 
-local window = Library:AddWindow("CesarXMtias Hub| Hola crack " .. string.upper(displayName), {
+local window = Library:AddWindow("CesarXMxtias Hub| BIENVENID@ " .. string.upper(displayName), {
     main_color = Color3.fromRGB(255, 0, 0),
     min_size = Vector2.new(450, 350)
 })
 
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-
--- Pestaña Principal
+-- Pestañas
 local MainTab = window:AddTab("Principal")
-MainTab:AddSwitch("Hide All Frames", function(bool)
-    -- Lógica para ocultar frames si se requiere
+local FarmTab = window:AddTab("Farm Op")
+
+-- Contenido de Pestaña Principal
+MainTab:AddSwitch("Hide All Frames", function(state)
+    local playerGui = LocalPlayer:FindFirstChildOfClass("PlayerGui")
+    if playerGui then
+        for _, gui in pairs(playerGui:GetChildren()) do
+            if gui:IsA("ScreenGui") and gui.Name ~= "SoloLevelingUI" then
+                gui.Enabled = not state
+            end
+        end
+    end
 end)
 
--- Pestaña Farm Op (con los botones de la captura de pantalla)
-local AutoFarm = window:AddTab("Farm Op")
-
-AutoFarm:AddButton("Anti Lag", function()
+-- Contenido de Pestaña Farm Op (Funciones para Muscle Legends)
+FarmTab:AddButton("Anti Lag", function()
     for _, v in pairs(game:GetDescendants()) do
         if v:IsA("ParticleEmitter") or v:IsA("Smoke") or v:IsA("Fire") or v:IsA("Sparkles") then
             pcall(function() v.Enabled = false end)
@@ -573,29 +369,37 @@ AutoFarm:AddButton("Anti Lag", function()
     lighting.GlobalShadows = false
     lighting.FogEnd = 9e9
     lighting.Brightness = 0
-    game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title = "Anti Lag activado",
-        Text = "Full optimization applied!",
-        Duration = 5
-    })
 end)
 
-AutoFarm:AddButton("Full Optimization", function()
-    -- Lógica de optimización adicional
+FarmTab:AddButton("Full Optimization", function()
+    for _, v in pairs(game:GetDescendants()) do
+        if v:IsA("BasePart") then
+            v.Material = Enum.Material.SmoothPlastic
+        end
+    end
 end)
 
-AutoFarm:AddButton("Equip Swift Samurai", function()
-    -- Lógica de equipamiento
+FarmTab:AddButton("Equip Swift Samurai", function()
+    local tool = LocalPlayer.Backpack:FindFirstChild("Swift Samurai")
+    if tool and LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid") then
+        LocalPlayer.Character.Humanoid:EquipTool(tool)
+    end
 end)
 
-AutoFarm:AddButton("Jungle Squat", function()
-    -- Lógica de entrenamiento
+FarmTab:AddButton("Jungle Squat", function()
+    if LocalPlayer:FindFirstChild("muscleEvent") then
+        LocalPlayer.muscleEvent:FireServer("rep")
+    end
 end)
 
-AutoFarm:AddButton("Industrial Squat", function()
-    -- Lógica de entrenamiento
+FarmTab:AddButton("Industrial Squat", function()
+    if LocalPlayer:FindFirstChild("muscleEvent") then
+        LocalPlayer.muscleEvent:FireServer("rep")
+    end
 end)
 
-AutoFarm:AddButton("Jungle lift", function()
-    -- Lógica de entrenamiento
+FarmTab:AddButton("Jungle lift", function()
+    if LocalPlayer:FindFirstChild("muscleEvent") then
+        LocalPlayer.muscleEvent:FireServer("rep")
+    end
 end)
