@@ -529,7 +529,7 @@ local Window = Library:AddWindow("General.EMPI2.0 xeno // MatiasXIsotx", {
 -- PESTAÑA 1: FARMING
 local FarmTab = Window:AddTab("Farm Rep")
 
-FarmTab:AddLabel("--- Selecciona Herramienta o Máquina ---")
+FarmTab:AddLabel("--- Selecciona Herramienta o Ejercicio ---")
 
 local ToolDropdown = FarmTab:AddDropdown("Herramienta / Ejercicio", function(selected)
     Config.SelectedTool = selected
@@ -538,7 +538,6 @@ ToolDropdown:Add("Punch")
 ToolDropdown:Add("Weight")
 ToolDropdown:Add("Pushups")
 ToolDropdown:Add("Situps")
--- Herramientas / Máquinas del Gimnasio Industrial añadidas directamente al menú
 ToolDropdown:Add("Hallowed Barbell")
 ToolDropdown:Add("Hallowed Weight")
 ToolDropdown:Add("Hallowed Squat")
@@ -579,10 +578,10 @@ SettingsTab:AddButton("Cerrar Script / UI", function()
 end)
 
 -- ==========================================
--- BUCLES DE FUNCIONAMIENTO ESTABLES
+-- BUCLES DE FUNCIONAMIENTO SEGUROS
 -- ==========================================
 
--- Fast Rep General (Funciona tanto para herramientas normales como para el Gimnasio Industrial)
+-- Fast Rep Inteligente (Detecta herramientas en mochila y equipo activo sin congelarse)
 task.spawn(function()
     while true do
         task.wait(0.12)
