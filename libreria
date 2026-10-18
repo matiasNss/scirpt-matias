@@ -245,7 +245,6 @@ function Library:AddWindow(title, options)
             local ContainerElements = {}
             local LayoutIndex = 1
 
-            -- Botón
             function ContainerElements:AddButton(btnText, callback)
                 callback = callback or function() end
                 local Btn = Instance.new("TextButton")
@@ -282,7 +281,6 @@ function Library:AddWindow(title, options)
                 return Btn
             end
 
-            -- Switch (Toggle)
             function ContainerElements:AddSwitch(toggleText, callback)
                 callback = callback or function() end
                 local toggled = false
@@ -354,7 +352,6 @@ function Library:AddWindow(title, options)
                 return setmetatable(ToggleMethods, {__index = ToggleFrame})
             end
 
-            -- Label
             function ContainerElements:AddLabel(text)
                 local Label = Instance.new("TextLabel")
                 Label.Parent = parentContainer
@@ -371,7 +368,6 @@ function Library:AddWindow(title, options)
                 return Label
             end
 
-            -- Dropdown
             function ContainerElements:AddDropdown(text, callback)
                 callback = callback or function() end
                 local DropdownFrame = Instance.new("Frame")
@@ -476,7 +472,7 @@ end
 
 
 -- ==========================================
--- LÓGICA DE MUSCLE LEGENDS & CALCULADORA
+-- CONFIGURACIÓN Y FUNCIONES DEL JUEGO
 -- ==========================================
 local Config = {
     FastRep = false,
@@ -524,26 +520,30 @@ local function formatTime(seconds)
     return string.format("%dd %dh %dm %ds", d, h, m, s)
 end
 
--- CREACIÓN DE LA VENTANA DE INTERFAZ
+-- VENTANA PRINCIPAL
 local Window = Library:AddWindow("General.EMPI2.0 xeno // MatiasXIsotx", {
     main_color = Color3.fromRGB(0, 170, 255),
     min_size = Vector2.new(480, 420)
 })
 
--- 1. PESTAÑA FARMING
+-- PESTAÑA 1: FARMING
 local FarmTab = Window:AddTab("Farm Rep")
 
-FarmTab:AddLabel("--- Auto Ejercicio (Fast Rep Ultra) ---")
+FarmTab:AddLabel("--- Selecciona Herramienta o Máquina ---")
 
-local ToolDropdown = FarmTab:AddDropdown("Herramienta", function(selected)
+local ToolDropdown = FarmTab:AddDropdown("Herramienta / Ejercicio", function(selected)
     Config.SelectedTool = selected
 end)
 ToolDropdown:Add("Punch")
 ToolDropdown:Add("Weight")
 ToolDropdown:Add("Pushups")
 ToolDropdown:Add("Situps")
+-- Herramientas / Máquinas del Gimnasio Industrial añadidas directamente al menú
+ToolDropdown:Add("Hallowed Barbell")
+ToolDropdown:Add("Hallowed Weight")
+ToolDropdown:Add("Hallowed Squat")
 
-FarmTab:AddSwitch("Fast Rep", function(state)
+FarmTab:AddSwitch("Fast Rep (Automático)", function(state)
     Config.FastRep = state
 end)
 
@@ -553,8 +553,8 @@ FarmTab:AddSwitch("Auto Rebirth", function(state)
     Config.AutoRebirth = state
 end)
 
--- 2. PESTAÑA CALCULADORA DE ESTADÍSTICAS
-local StatsTab = Window:AddTab("Calculadora de Estadísticas")
+-- PESTAÑA 2: CALCULADORA DE ESTADÍSTICAS
+local StatsTab = Window:AddTab("Calculadora")
 
 local TimeElapsedLabel = StatsTab:AddLabel("Fast Rep Time: 0d 0h 0m 0s")
 
@@ -565,7 +565,7 @@ local DurabilityRateLabel = StatsTab:AddLabel("Durability Rate: 0/Hour | 0/Day |
 StatsTab:AddLabel("--- Tus Estadísticas Actuales ---")
 local StatsCurrentLabel = StatsTab:AddLabel("Stats: Fuerza: 0 | Durabilidad: 0")
 
--- 3. PESTAÑA AJUSTES
+-- PESTAÑA 3: AJUSTES
 local SettingsTab = Window:AddTab("Ajustes")
 
 SettingsTab:AddLabel("--- Protección ---")
@@ -579,24 +579,31 @@ SettingsTab:AddButton("Cerrar Script / UI", function()
 end)
 
 -- ==========================================
--- BUCLES DE FUNCIONAMIENTO
+-- BUCLES DE FUNCIONAMIENTO ESTABLES
 -- ==========================================
 
--- Fast Rep Ultrarrápido con RunService
-RunService.Heartbeat:Connect(function()
-    if Config.FastRep and LocalPlayer.Character then
-        local char = LocalPlayer.Character
-        local backpack = LocalPlayer.Backpack
-        local tool = backpack:FindFirstChild(Config.SelectedTool) or char:FindFirstChild(Config.SelectedTool)
-        
-        if tool then
-            if tool.Parent == backpack then
-                local humanoid = char:FindFirstChildOfClass("Humanoid")
-                if humanoid then
-                    humanoid:EquipTool(tool)
+-- Fast Rep General (Funciona tanto para herramientas normales como para el Gimnasio Industrial)
+task.spawn(function()
+    while true do
+        task.wait(0.12)
+        if Config.FastRep and LocalPlayer.Character then
+            local char = LocalPlayer.Character
+            local humanoid = char:FindFirstChildOfClass("Humanoid")
+            
+            if humanoid then
+                local tool = char:FindFirstChild(Config.SelectedTool)
+                if not tool then
+                    local backpackTool = LocalPlayer.Backpack:FindFirstChild(Config.SelectedTool)
+                    if backpackTool then
+                        pcall(function()
+                            humanoid:EquipTool(backpackTool)
+                        end)
+                    end
+                else
+                    pcall(function()
+                        tool:Activate()
+                    end)
                 end
-            else
-                tool:Activate()
             end
         end
     end
@@ -624,7 +631,7 @@ LocalPlayer.Idled:Connect(function()
     end
 end)
 
--- Bucle de Calculadora y Estadísticas en Vivo
+-- Calculadora de Estadísticas
 task.spawn(function()
     while task.wait(1) do
         local currentTime = tick()
