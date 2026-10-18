@@ -6,6 +6,7 @@ local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local VirtualUser = game:GetService("VirtualUser")
+local VirtualInputManager = game:GetService("VirtualInputManager")
 local CoreGui = game:GetService("CoreGui")
 local LocalPlayer = Players.LocalPlayer
 
@@ -526,10 +527,10 @@ local Window = Library:AddWindow("General.EMPI2.0 xeno // MatiasXIsotx", {
     min_size = Vector2.new(480, 420)
 })
 
--- PESTAÑA 1: FARMING
+-- PESTAÑA 1: FARMING GENERAL
 local FarmTab = Window:AddTab("Farm Rep")
 
-FarmTab:AddLabel("--- Herramienta / Ejercicio ---")
+FarmTab:AddLabel("--- Herramientas / Ejercicio ---")
 
 local ToolDropdown = FarmTab:AddDropdown("Herramienta", function(selected)
     Config.SelectedTool = selected
@@ -549,7 +550,26 @@ FarmTab:AddSwitch("Auto Rebirth", function(state)
     Config.AutoRebirth = state
 end)
 
--- PESTAÑA 2: CALCULADORA DE ESTADÍSTICAS
+
+-- PESTAÑA 2: GIMNASIO INDUSTRIAL (Máquinas)
+local IndustrialTab = Window:AddTab("Gym Industrial")
+
+IndustrialTab:AddLabel("--- Máquinas Avanzadas ---")
+
+IndustrialTab:AddButton("Industrial Squat", function()
+    local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    local hrp = char:WaitForChild("HumanoidRootPart")
+
+    hrp.CFrame = CFrame.new(-5217.11523, 61.056282, 5418.07715, 1, 0, 0, 0, 1, 0, 0, 0, 1) + Vector3.new(0, 3, 0)
+    task.wait(0.2)
+
+    VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.E, false, game)
+    task.wait(0.05)
+    VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.E, false, game)
+end)
+
+
+-- PESTAÑA 3: CALCULADORA DE ESTADÍSTICAS
 local StatsTab = Window:AddTab("Calculadora")
 
 local TimeElapsedLabel = StatsTab:AddLabel("Fast Rep Time: 0d 0h 0m 0s")
@@ -561,7 +581,8 @@ local DurabilityRateLabel = StatsTab:AddLabel("Durability Rate: 0/Hour | 0/Day |
 StatsTab:AddLabel("--- Tus Estadísticas Actuales ---")
 local StatsCurrentLabel = StatsTab:AddLabel("Stats: Fuerza: 0 | Durabilidad: 0")
 
--- PESTAÑA 3: AJUSTES
+
+-- PESTAÑA 4: AJUSTES
 local SettingsTab = Window:AddTab("Ajustes")
 
 SettingsTab:AddLabel("--- Protección ---")
@@ -575,14 +596,14 @@ SettingsTab:AddButton("Cerrar Script / UI", function()
 end)
 
 -- ==========================================
--- BUCLES DE FUNCIONAMIENTO
+-- BUCLES DE FUNCIONAMIENTO SEGUROS
 -- ==========================================
 
--- Fast Rep Puro y Estable (Como el video original)
+-- Fast Rep Seguro
 task.spawn(function()
     while true do
         task.wait(0.12)
-        if Config.FastRep and LocalPlayer.Character then
+        if Config.FastRep and LocalPlayer.Character and Config.SelectedTool ~= "" then
             local char = LocalPlayer.Character
             local humanoid = char:FindFirstChildOfClass("Humanoid")
             
