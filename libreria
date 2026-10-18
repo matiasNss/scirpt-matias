@@ -1,4 +1,4 @@
-Aquí tienes el script adaptado e integrado con la librería de interfaz gráfica que solicitaste, con los elementos visuales y las pestañas actualizadas según la imagen de referencia (pestañas **Principal** y **Farm Op**, título personalizado como en la captura y los botones/opciones adicionales de **Muscle Legends**):
+
 
 ```lua
 -- ========================================================
@@ -546,7 +546,7 @@ end
 local player = game.Players.LocalPlayer
 local displayName = player.DisplayName or player.Name
 
-local window = Library:AddWindow("SCRIPT NEW| BIENVENID@ " .. string.upper(displayName), {
+local window = Library:AddWindow("CesarXMxtias Hub| Hola crack " .. string.upper(displayName), {
     main_color = Color3.fromRGB(255, 0, 0),
     min_size = Vector2.new(450, 350)
 })
