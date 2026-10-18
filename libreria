@@ -529,20 +529,17 @@ local Window = Library:AddWindow("General.EMPI2.0 xeno // MatiasXIsotx", {
 -- PESTAÑA 1: FARMING
 local FarmTab = Window:AddTab("Farm Rep")
 
-FarmTab:AddLabel("--- Selecciona Herramienta o Ejercicio ---")
+FarmTab:AddLabel("--- Herramienta / Ejercicio ---")
 
-local ToolDropdown = FarmTab:AddDropdown("Herramienta / Ejercicio", function(selected)
+local ToolDropdown = FarmTab:AddDropdown("Herramienta", function(selected)
     Config.SelectedTool = selected
 end)
 ToolDropdown:Add("Punch")
 ToolDropdown:Add("Weight")
 ToolDropdown:Add("Pushups")
 ToolDropdown:Add("Situps")
-ToolDropdown:Add("Hallowed Barbell")
-ToolDropdown:Add("Hallowed Weight")
-ToolDropdown:Add("Hallowed Squat")
 
-FarmTab:AddSwitch("Fast Rep (Automático)", function(state)
+FarmTab:AddSwitch("Fast Rep", function(state)
     Config.FastRep = state
 end)
 
@@ -578,10 +575,10 @@ SettingsTab:AddButton("Cerrar Script / UI", function()
 end)
 
 -- ==========================================
--- BUCLES DE FUNCIONAMIENTO SEGUROS
+-- BUCLES DE FUNCIONAMIENTO
 -- ==========================================
 
--- Fast Rep Inteligente (Detecta herramientas en mochila y equipo activo sin congelarse)
+-- Fast Rep Puro y Estable (Como el video original)
 task.spawn(function()
     while true do
         task.wait(0.12)
