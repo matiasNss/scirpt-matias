@@ -553,7 +553,7 @@ FarmTab:AddSwitch("Auto Rebirth", function(state)
 end)
 
 
--- PESTAÑA 2: GIMNASIO INDUSTRIAL (Máquinas con Teleport & Fast Farm)
+-- PESTAÑA 2: GIMNASIO INDUSTRIAL (Fast Farm sin spamear E)
 local IndustrialTab = Window:AddTab("Gym Industrial")
 
 IndustrialTab:AddLabel("--- Industrial Squat ---")
@@ -568,10 +568,10 @@ IndustrialTab:AddButton("Teleport: Industrial Squat", function()
     VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.E, false, game)
 end)
 
-IndustrialTab:AddSwitch("Auto Farm (Industrial Squat)", function(state)
+IndustrialTab:AddSwitch("Fast Farm (Industrial Squat)", function(state)
     Config.AutoIndustrialSquat = state
     if state then
-        Config.AutoIndustrialLift = false -- Desactivar la otra máquina si se activa esta
+        Config.AutoIndustrialLift = false
         local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
         local hrp = char:WaitForChild("HumanoidRootPart")
         hrp.CFrame = CFrame.new(-5217.11523, 61.056282, 5418.07715, 1, 0, 0, 0, 1, 0, 0, 0, 1) + Vector3.new(0, 3, 0)
@@ -590,10 +590,10 @@ IndustrialTab:AddButton("Teleport: Industrial Lift", function()
     VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.E, false, game)
 end)
 
-IndustrialTab:AddSwitch("Auto Farm (Industrial Lift)", function(state)
+IndustrialTab:AddSwitch("Fast Farm (Industrial Lift)", function(state)
     Config.AutoIndustrialLift = state
     if state then
-        Config.AutoIndustrialSquat = false -- Desactivar la otra máquina si se activa esta
+        Config.AutoIndustrialSquat = false
         local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
         local hrp = char:WaitForChild("HumanoidRootPart")
         hrp.CFrame = CFrame.new(-5492.69824, 61.056282, 4643.6499, 0.813733459, -3.26025003e-08, 0.58123821, 1.21058275e-08, 1, 3.91433019e-08, -0.58123821, -2.48158454e-08, 0.813733459)
@@ -658,53 +658,53 @@ task.spawn(function()
     end
 end)
 
--- Auto Farm para Industrial Squat
+-- Fast Farm Real para Industrial Squat (Mantiene la posición y activa las repeticiones rápidas sin spamear E)
 task.spawn(function()
     while true do
-        task.wait(0.2)
+        task.wait(0.12)
         if Config.AutoIndustrialSquat then
             pcall(function()
                 local char = LocalPlayer.Character
                 if char and char:FindFirstChild("HumanoidRootPart") then
+                    -- Fija al jugador en el sitio exacto de la máquina
                     char.HumanoidRootPart.CFrame = CFrame.new(-5217.11523, 61.056282, 5418.07715, 1, 0, 0, 0, 1, 0, 0, 0, 1) + Vector3.new(0, 3, 0)
-                    for _, obj in ipairs(workspace:GetDescendants()) do
-                        if obj:IsA("ProximityPrompt") and obj.Parent then
-                            local dist = (obj.Parent.Position - char.HumanoidRootPart.Position).Magnitude
-                            if dist < 12 then
-                                fireproximityprompt(obj)
-                            end
+                end
+                
+                -- Simula la repetición rápida por eventos de herramienta/equipo si tuvieran activa la acción de rep
+                local humanoid = char and char:FindFirstChildOfClass("Humanoid")
+                if humanoid then
+                    for _, tool in ipairs(char:GetChildren()) do
+                        if tool:IsA("Tool") then
+                            tool:Activate()
                         end
                     end
                 end
-                VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.E, false, game)
-                task.wait(0.05)
-                VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.E, false, game)
             end)
         end
     end
 end)
 
--- Auto Farm para Industrial Lift
+-- Fast Farm Real para Industrial Lift
 task.spawn(function()
     while true do
-        task.wait(0.2)
+        task.wait(0.12)
         if Config.AutoIndustrialLift then
             pcall(function()
                 local char = LocalPlayer.Character
                 if char and char:FindFirstChild("HumanoidRootPart") then
+                    -- Fija al jugador en el sitio exacto de la máquina
                     char.HumanoidRootPart.CFrame = CFrame.new(-5492.69824, 61.056282, 4643.6499, 0.813733459, -3.26025003e-08, 0.58123821, 1.21058275e-08, 1, 3.91433019e-08, -0.58123821, -2.48158454e-08, 0.813733459)
-                    for _, obj in ipairs(workspace:GetDescendants()) do
-                        if obj:IsA("ProximityPrompt") and obj.Parent then
-                            local dist = (obj.Parent.Position - char.HumanoidRootPart.Position).Magnitude
-                            if dist < 12 then
-                                fireproximityprompt(obj)
-                            end
+                end
+                
+                -- Simula la repetición rápida por eventos de herramienta/equipo
+                local humanoid = char and char:FindFirstChildOfClass("Humanoid")
+                if humanoid then
+                    for _, tool in ipairs(char:GetChildren()) do
+                        if tool:IsA("Tool") then
+                            tool:Activate()
                         end
                     end
                 end
-                VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.E, false, game)
-                task.wait(0.05)
-                VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.E, false, game)
             end)
         end
     end
