@@ -1,4 +1,4 @@
-local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/Cesarth1210/guthub/refs/heads/main/Mainlua"))()
+local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/matiasNss/scirpt-matias/refs/heads/main/libreria"))()
 
 local player = game.Players.LocalPlayer
 local displayName = player.DisplayName or player.Name
@@ -895,7 +895,7 @@ local uptimeLabel = fastStrengthFolder:AddLabel("Tiempo Activo: 0d 0h 0m 0s")
 local paceLabel = fastStrengthFolder:AddLabel("Ritmo: 0 / Hora | 0 / Día | 0 / Sem.")
 local avgPaceLabel = fastStrengthFolder:AddLabel("Promedio: 0 / Hora | 0 / Día | 0 / Sem.")
 
--- Corrección automática de Scroll para la librería externa
+-- Corrección dinámica del área de desplazamiento (CanvasSize)
 task.spawn(function()
     task.wait(0.5)
     local coreGui = (gethui and gethui()) or game:GetService("CoreGui")
