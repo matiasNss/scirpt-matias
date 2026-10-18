@@ -19,7 +19,7 @@ local Config = {
 -- ==========================================
 local Window = Library:AddWindow("Muscle Legends - System", {
     main_color = Color3.fromRGB(0, 170, 255),
-    min_size = Vector2.new(460, 400)
+    min_size = Vector2.new(460, 420)
 })
 
 -- 1. PESTAÑA PRINCIPAL (FARMING)
@@ -46,7 +46,7 @@ FarmTab:AddSwitch("Auto Rebirth", function(state)
 end)
 
 
--- 2. PESTAÑA DE CALCULADORA Y ESTADÍSTICAS
+-- 2. PESTAÑA DE CALCULADORAS Y ESTADÍSTICAS
 local StatsTab = Window:AddTab("Stats & Calc")
 
 StatsTab:AddLabel("--- Tus Estadísticas Actuales ---")
@@ -56,15 +56,18 @@ local DurabilityLabel = StatsTab:AddLabel("Durabilidad: Cargando...")
 local AgilityLabel = StatsTab:AddLabel("Agilidad: Cargando...")
 local RebirthsLabel = StatsTab:AddLabel("Rebirths: Cargando...")
 
-StatsTab:AddLabel("--- Calculadora de Ganancias ---")
-local GainPerRepBox = StatsTab:AddTextBox("Fuerza/Durabilidad por repetición (ej: 50)", function(text) end)
-local RepsPerMinBox = StatsTab:AddTextBox("Repeticiones estimadas por minuto (ej: 120)", function(text) end)
+-- ------------------------------------------
+-- CALCULADORA 1: MANUAL (Por Clicks / Reps)
+-- ------------------------------------------
+StatsTab:AddLabel("--- Calc 1: Estimación por Repetición ---")
+local GainPerRepBox = StatsTab:AddTextBox("Fuerza/Durabilidad por rep (ej: 50)", function(text) end)
+local RepsPerMinBox = StatsTab:AddTextBox("Reps por minuto (ej: 120)", function(text) end)
 
 local CalcHourLabel = StatsTab:AddLabel("Por Hora: 0")
 local CalcDayLabel = StatsTab:AddLabel("Por Día: 0")
 local CalcWeekLabel = StatsTab:AddLabel("Por Semana: 0")
 
-StatsTab:AddButton("Calcular Ganancias (Fuerza/Durabilidad)", function()
+StatsTab:AddButton("Calcular (Manual)", function()
     local gain = tonumber(GainPerRepBox.Text)
     local repsMin = tonumber(RepsPerMinBox.Text)
     
@@ -79,9 +82,53 @@ StatsTab:AddButton("Calcular Ganancias (Fuerza/Durabilidad)", function()
         CalcWeekLabel.Text = string.format("Por Semana: %s", tostring(perWeek))
     else
         CalcHourLabel.Text = "Por Hora: Introduce números válidos"
-        CalcDayLabel.Text = "Por Día: -"
-        CalcWeekLabel.Text = "Por Semana: -"
     end
+end)
+
+-- ------------------------------------------
+-- CALCULADORA 2: MEDIDOR EN TIEMPO REAL
+-- ------------------------------------------
+StatsTab:AddLabel("--- Calc 2: Proyección en Tiempo Real ---")
+local RealTimeStatus = StatsTab:AddLabel("Estado: Presiona Medir")
+local RealTimeStrength = StatsTab:AddLabel("Fuerza (1h / 1d / 1s): -")
+local RealTimeDurability = StatsTab:AddLabel("Durabilidad (1h / 1d / 1s): -")
+
+local isMeasuring = false
+
+StatsTab:AddButton("Medir Ganancias en Vivo (10 seg)", function()
+    if isMeasuring then return end
+    isMeasuring = true
+    
+    -- Obtener valores iniciales
+    local startStrength = (LocalPlayer:FindFirstChild("leaderstats") and LocalPlayer.leaderstats:FindFirstChild("Strength")) and LocalPlayer.leaderstats.Strength.Value or 0
+    local startDurability = LocalPlayer:FindFirstChild("Durability") and LocalPlayer.Durability.Value or 0
+    
+    for i = 10, 1, -1 do
+        RealTimeStatus.Text = "Estado: Midiendo... (" .. i .. "s restantes)"
+        task.wait(1)
+    end
+    
+    -- Obtener valores finales tras 10 segundos
+    local endStrength = (LocalPlayer:FindFirstChild("leaderstats") and LocalPlayer.leaderstats:FindFirstChild("Strength")) and LocalPlayer.leaderstats.Strength.Value or 0
+    local endDurability = LocalPlayer:FindFirstChild("Durability") and LocalPlayer.Durability.Value or 0
+    
+    local strGainedIn10s = math.max(0, endStrength - startStrength)
+    local durGainedIn10s = math.max(0, endDurability - startDurability)
+    
+    -- Proyectar (Multiplicar por 360 para obtener por hora)
+    local strPerHour = strGainedIn10s * 360
+    local strPerDay = strPerHour * 24
+    local strPerWeek = strPerDay * 7
+    
+    local durPerHour = durGainedIn10s * 360
+    local durPerDay = durPerHour * 24
+    local durPerWeek = durPerDay * 7
+    
+    RealTimeStatus.Text = "Estado: ¡Medición Completada!"
+    RealTimeStrength.Text = string.format("Fuerza -> 1h: %s | 1d: %s | 1s: %s", tostring(strPerHour), tostring(strPerDay), tostring(strPerWeek))
+    RealTimeDurability.Text = string.format("Durabilidad -> 1h: %s | 1d: %s | 1s: %s", tostring(durPerHour), tostring(durPerDay), tostring(durPerWeek))
+    
+    isMeasuring = false
 end)
 
 
