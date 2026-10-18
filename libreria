@@ -1,6 +1,5 @@
 
 
-```lua
 -- ========================================================
 -- LIBRERÍA SOLO LEVELING (INTEGRADA Y ADAPTADA)
 -- ========================================================
@@ -546,7 +545,7 @@ end
 local player = game.Players.LocalPlayer
 local displayName = player.DisplayName or player.Name
 
-local window = Library:AddWindow("CesarXMxtias Hub| Hola crack " .. string.upper(displayName), {
+local window = Library:AddWindow("CesarXMtias Hub| Hola crack " .. string.upper(displayName), {
     main_color = Color3.fromRGB(255, 0, 0),
     min_size = Vector2.new(450, 350)
 })
@@ -600,5 +599,3 @@ end)
 AutoFarm:AddButton("Jungle lift", function()
     -- Lógica de entrenamiento
 end)
-
-```
