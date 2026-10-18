@@ -2,10 +2,11 @@ local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/matia
 
 local Players = game:GetService("Players")
 local VirtualUser = game:GetService("VirtualUser")
+local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
 
 -- ==========================================
--- VARIABLES DE CONFIGURACIÓN
+-- VARIABLES DE CONFIGURACIÓN Y ESTADÍSTICAS
 -- ==========================================
 local Config = {
     FastRep = false,
@@ -14,18 +15,66 @@ local Config = {
     SelectedTool = "Punch"
 }
 
+-- Variables para el cálculo de tasas automáticas (inspirado en el video)
+local sessionStartTime = tick()
+local initialStrength = 0
+local initialDurability = 0
+local lastStrength = 0
+local lastDurability = 0
+
+-- Intentar obtener valores iniciales seguros
+task.spawn(function()
+    task.wait(1)
+    if LocalPlayer:FindFirstChild("leaderstats") and LocalPlayer.leaderstats:FindFirstChild("Strength") then
+        initialStrength = LocalPlayer.leaderstats.Strength.Value
+        lastStrength = initialStrength
+    end
+    if LocalPlayer:FindFirstChild("Durability") then
+        initialDurability = LocalPlayer.Durability.Value
+        lastDurability = initialDurability
+    end
+end)
+
+-- Función auxiliar para formatear números grandes estilo Muscle Legends (K, M, B, T, Qa, etc.)
+local function formatValue(val)
+    if not val then return "0" end
+    if val >= 1e15 then
+        return string.format("%.2fQa", val / 1e15)
+    elseif val >= 1e12 then
+        return string.format("%.2fT", val / 1e12)
+    elseif val >= 1e9 then
+        return string.format("%.2fB", val / 1e9)
+    elseif val >= 1e6 then
+        return string.format("%.2fM", val / 1e6)
+    elseif val >= 1e3 then
+        return string.format("%.2fK", val / 1e3)
+    else
+        return tostring(math.floor(val))
+    end
+end
+
+-- Función para formatear el tiempo transcurrido (d h m s)
+local function formatTime(seconds)
+    local d = math.floor(seconds / 86400)
+    local h = math.floor((seconds % 86400) / 3600)
+    local m = math.floor((seconds % 3600) / 60)
+    local s = math.floor(seconds % 60)
+    return string.format("%dd %dh %dm %ds", d, h, m, s)
+end
+
+
 -- ==========================================
--- CREACIÓN DE LA INTERFAZ
+-- CREACIÓN DE LA INTERFAZ (UI)
 -- ==========================================
 local Window = Library:AddWindow("Muscle Legends - System", {
     main_color = Color3.fromRGB(0, 170, 255),
-    min_size = Vector2.new(460, 420)
+    min_size = Vector2.new(480, 420)
 })
 
 -- 1. PESTAÑA PRINCIPAL (FARMING)
 local FarmTab = Window:AddTab("Farming")
 
-FarmTab:AddLabel("--- Auto Ejercicio (Fast Rep) ---")
+FarmTab:AddLabel("--- Auto Ejercicio (Fast Rep Ultra) ---")
 
 local ToolDropdown = FarmTab:AddDropdown("Herramienta", function(selected)
     Config.SelectedTool = selected
@@ -35,7 +84,7 @@ ToolDropdown:Add("Weight")
 ToolDropdown:Add("Pushups")
 ToolDropdown:Add("Situps")
 
-FarmTab:AddSwitch("Activar Fast Rep", function(state)
+FarmTab:AddSwitch("Fast Rep", function(state)
     Config.FastRep = state
 end)
 
@@ -46,90 +95,17 @@ FarmTab:AddSwitch("Auto Rebirth", function(state)
 end)
 
 
--- 2. PESTAÑA DE CALCULADORAS Y ESTADÍSTICAS
-local StatsTab = Window:AddTab("Stats & Calc")
+-- 2. PESTAÑA DE CALCULADORA Y ESTADÍSTICAS (Estilo del video)
+local StatsTab = Window:AddTab("Calculadora de Estadísticas")
+
+local TimeElapsedLabel = StatsTab:AddLabel("Fast Rep Time: 0d 0h 0m 0s")
+
+StatsTab:AddLabel("--- Tasas de Ganancia Automática ---")
+local StrengthRateLabel = StatsTab:AddLabel("Strength Rate: 0/Hour | 0/Day | 0/Week")
+local DurabilityRateLabel = StatsTab:AddLabel("Durability Rate: 0/Hour | 0/Day | 0/Week")
 
 StatsTab:AddLabel("--- Tus Estadísticas Actuales ---")
-
-local StrengthLabel = StatsTab:AddLabel("Fuerza: Cargando...")
-local DurabilityLabel = StatsTab:AddLabel("Durabilidad: Cargando...")
-local AgilityLabel = StatsTab:AddLabel("Agilidad: Cargando...")
-local RebirthsLabel = StatsTab:AddLabel("Rebirths: Cargando...")
-
--- ------------------------------------------
--- CALCULADORA 1: MANUAL (Por Clicks / Reps)
--- ------------------------------------------
-StatsTab:AddLabel("--- Calc 1: Estimación por Repetición ---")
-local GainPerRepBox = StatsTab:AddTextBox("Fuerza/Durabilidad por rep (ej: 50)", function(text) end)
-local RepsPerMinBox = StatsTab:AddTextBox("Reps por minuto (ej: 120)", function(text) end)
-
-local CalcHourLabel = StatsTab:AddLabel("Por Hora: 0")
-local CalcDayLabel = StatsTab:AddLabel("Por Día: 0")
-local CalcWeekLabel = StatsTab:AddLabel("Por Semana: 0")
-
-StatsTab:AddButton("Calcular (Manual)", function()
-    local gain = tonumber(GainPerRepBox.Text)
-    local repsMin = tonumber(RepsPerMinBox.Text)
-    
-    if gain and repsMin then
-        local perMinute = gain * repsMin
-        local perHour = perMinute * 60
-        local perDay = perHour * 24
-        local perWeek = perDay * 7
-        
-        CalcHourLabel.Text = string.format("Por Hora: %s", tostring(perHour))
-        CalcDayLabel.Text = string.format("Por Día: %s", tostring(perDay))
-        CalcWeekLabel.Text = string.format("Por Semana: %s", tostring(perWeek))
-    else
-        CalcHourLabel.Text = "Por Hora: Introduce números válidos"
-    end
-end)
-
--- ------------------------------------------
--- CALCULADORA 2: MEDIDOR EN TIEMPO REAL
--- ------------------------------------------
-StatsTab:AddLabel("--- Calc 2: Proyección en Tiempo Real ---")
-local RealTimeStatus = StatsTab:AddLabel("Estado: Presiona Medir")
-local RealTimeStrength = StatsTab:AddLabel("Fuerza (1h / 1d / 1s): -")
-local RealTimeDurability = StatsTab:AddLabel("Durabilidad (1h / 1d / 1s): -")
-
-local isMeasuring = false
-
-StatsTab:AddButton("Medir Ganancias en Vivo (10 seg)", function()
-    if isMeasuring then return end
-    isMeasuring = true
-    
-    -- Obtener valores iniciales
-    local startStrength = (LocalPlayer:FindFirstChild("leaderstats") and LocalPlayer.leaderstats:FindFirstChild("Strength")) and LocalPlayer.leaderstats.Strength.Value or 0
-    local startDurability = LocalPlayer:FindFirstChild("Durability") and LocalPlayer.Durability.Value or 0
-    
-    for i = 10, 1, -1 do
-        RealTimeStatus.Text = "Estado: Midiendo... (" .. i .. "s restantes)"
-        task.wait(1)
-    end
-    
-    -- Obtener valores finales tras 10 segundos
-    local endStrength = (LocalPlayer:FindFirstChild("leaderstats") and LocalPlayer.leaderstats:FindFirstChild("Strength")) and LocalPlayer.leaderstats.Strength.Value or 0
-    local endDurability = LocalPlayer:FindFirstChild("Durability") and LocalPlayer.Durability.Value or 0
-    
-    local strGainedIn10s = math.max(0, endStrength - startStrength)
-    local durGainedIn10s = math.max(0, endDurability - startDurability)
-    
-    -- Proyectar (Multiplicar por 360 para obtener por hora)
-    local strPerHour = strGainedIn10s * 360
-    local strPerDay = strPerHour * 24
-    local strPerWeek = strPerDay * 7
-    
-    local durPerHour = durGainedIn10s * 360
-    local durPerDay = durPerHour * 24
-    local durPerWeek = durPerDay * 7
-    
-    RealTimeStatus.Text = "Estado: ¡Medición Completada!"
-    RealTimeStrength.Text = string.format("Fuerza -> 1h: %s | 1d: %s | 1s: %s", tostring(strPerHour), tostring(strPerDay), tostring(strPerWeek))
-    RealTimeDurability.Text = string.format("Durabilidad -> 1h: %s | 1d: %s | 1s: %s", tostring(durPerHour), tostring(durPerDay), tostring(durPerWeek))
-    
-    isMeasuring = false
-end)
+local StatsCurrentLabel = StatsTab:AddLabel("Stats: Fuerza: 0 | Durabilidad: 0")
 
 
 -- 3. PESTAÑA DE AJUSTES & AFK
@@ -137,7 +113,7 @@ local SettingsTab = Window:AddTab("Ajustes")
 
 SettingsTab:AddLabel("--- Protección ---")
 
-SettingsTab:AddSwitch("Anti AFK (Desconexión)", function(state)
+SettingsTab:AddSwitch("Anti AFK", function(state)
     Config.AntiAFK = state
 end)
 
@@ -147,18 +123,23 @@ end)
 
 
 -- ==========================================
--- LÓGICA / LOOPS DEL SCRIPT
+-- LÓGICA / LOOPS DEL SCRIPT (Optimizado)
 -- ==========================================
 
--- Loop Fast Rep
-task.spawn(function()
-    while task.wait() do
-        if Config.FastRep and LocalPlayer.Character then
-            local tool = LocalPlayer.Backpack:FindFirstChild(Config.SelectedTool) or LocalPlayer.Character:FindFirstChild(Config.SelectedTool)
-            if tool then
-                if tool.Parent == LocalPlayer.Backpack then
-                    LocalPlayer.Character.Humanoid:EquipTool(tool)
+-- Loop Fast Rep Ultrarrápido (Equipa y actica directo por RunService para máxima velocidad)
+RunService.Heartbeat:Connect(function()
+    if Config.FastRep and LocalPlayer.Character then
+        local char = LocalPlayer.Character
+        local backpack = LocalPlayer.Backpack
+        local tool = backpack:FindFirstChild(Config.SelectedTool) or char:FindFirstChild(Config.SelectedTool)
+        
+        if tool then
+            if tool.Parent == backpack then
+                local humanoid = char:FindFirstChildOfClass("Humanoid")
+                if humanoid then
+                    humanoid:EquipTool(tool)
                 end
+            else
                 tool:Activate()
             end
         end
@@ -167,7 +148,7 @@ end)
 
 -- Loop Auto Rebirth
 task.spawn(function()
-    while task.wait(0.5) do
+    while task.wait(0.4) do
         if Config.AutoRebirth then
             local rebirthEvent = game:GetService("ReplicatedStorage"):FindFirstChild("rEvents") 
                 and game:GetService("ReplicatedStorage").rEvents:FindFirstChild("rebirthRemote")
@@ -187,25 +168,45 @@ LocalPlayer.Idled:Connect(function()
     end
 end)
 
--- Actualización en tiempo real de Estadísticas
+-- Loop de Actualización de Estadísticas y Tasas Automáticas (Estilo Video)
 task.spawn(function()
     while task.wait(1) do
-        if LocalPlayer:FindFirstChild("leaderstats") then
-            local leaderstats = LocalPlayer.leaderstats
-            
-            if leaderstats:FindFirstChild("Strength") then
-                StrengthLabel.Text = "Fuerza: " .. tostring(leaderstats.Strength.Value)
-            end
-            if leaderstats:FindFirstChild("Rebirths") then
-                RebirthsLabel.Text = "Rebirths: " .. tostring(leaderstats.Rebirths.Value)
-            end
-        end
+        local currentTime = tick()
+        local elapsedSeconds = currentTime - sessionStartTime
+        TimeElapsedLabel.Text = "Fast Rep Time: " .. formatTime(elapsedSeconds)
         
-        if LocalPlayer:FindFirstChild("Agility") then
-            AgilityLabel.Text = "Agilidad: " .. tostring(LocalPlayer.Agility.Value)
+        -- Obtener valores actuales de los leaderstats y atributos del jugador
+        local currentStrength = 0
+        local currentDurability = 0
+        
+        if LocalPlayer:FindFirstChild("leaderstats") and LocalPlayer.leaderstats:FindFirstChild("Strength") then
+            currentStrength = LocalPlayer.leaderstats.Strength.Value
         end
         if LocalPlayer:FindFirstChild("Durability") then
-            DurabilityLabel.Text = "Durabilidad: " .. tostring(LocalPlayer.Durability.Value)
+            currentDurability = LocalPlayer.Durability.Value
         end
+        
+        -- Calcular ganancias acumuladas desde el inicio
+        local gainedStrength = math.max(0, currentStrength - initialStrength)
+        local gainedDurability = math.max(0, currentDurability - initialDurability)
+        
+        if elapsedSeconds > 2 then
+            -- Calcular por hora, día y semana basados en el ritmo real de ganancia
+            local strPerSec = gainedStrength / elapsedSeconds
+            local durPerSec = gainedDurability / elapsedSeconds
+            
+            local strHour = strPerSec * 3600
+            local strDay = strHour * 24
+            local strWeek = strDay * 7
+            
+            local durHour = durPerSec * 3600
+            local durDay = durHour * 24
+            local durWeek = durDay * 7
+            
+            StrengthRateLabel.Text = string.format("Strength Rate: %s/Hour | %s/Day | %s/Week", formatValue(strHour), formatValue(strDay), formatValue(strWeek))
+            DurabilityRateLabel.Text = string.format("Durability Rate: %s/Hour | %s/Day | %s/Week", formatValue(durHour), formatValue(durDay), formatValue(durWeek))
+        end
+        
+        StatsCurrentLabel.Text = string.format("Stats: Fuerza: %s | Durabilidad: %s", formatValue(currentStrength), formatValue(currentDurability))
     end
 end)
