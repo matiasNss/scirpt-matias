@@ -1,7 +1,9 @@
+-- ========================================================
+-- LIBRERÍA SOLO LEVELING (INTEGRADA)
+-- ========================================================
 local Library = {}
 Library.Unloaded = false
 
--- Eliminar ejecuciones anteriores
 do
     local coreGui = (gethui and gethui()) or game:GetService("CoreGui")
     if coreGui:FindFirstChild("SoloLevelingUI") then
@@ -9,7 +11,6 @@ do
     end
 end
 
--- ScreenGui Principal
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "SoloLevelingUI"
 ScreenGui.Parent = (gethui and gethui()) or game:GetService("CoreGui")
@@ -30,7 +31,6 @@ function Library:AddWindow(title, options)
     local winWidth = math.clamp(options.min_size and options.min_size.X or 450, 300, viewport.X - 40)
     local winHeight = math.clamp(options.min_size and options.min_size.Y or 350, 250, viewport.Y - 120)
 
-    -- Ventana Principal
     local MainFrame = Instance.new("Frame")
     MainFrame.Name = "MainFrame"
     MainFrame.Parent = ScreenGui
@@ -51,7 +51,6 @@ function Library:AddWindow(title, options)
     UIStroke.Thickness = 1.5
     UIStroke.Parent = MainFrame
 
-    -- Barra Superior
     local TitleBar = Instance.new("Frame")
     TitleBar.Name = "TitleBar"
     TitleBar.Parent = MainFrame
@@ -74,7 +73,6 @@ function Library:AddWindow(title, options)
     TitleText.TextSize = 14
     TitleText.TextXAlignment = Enum.TextXAlignment.Left
 
-    -- Botón Minimizar
     local ToggleBtn = Instance.new("TextButton")
     ToggleBtn.Parent = TitleBar
     ToggleBtn.BackgroundTransparency = 1
@@ -85,7 +83,6 @@ function Library:AddWindow(title, options)
     ToggleBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
     ToggleBtn.TextSize = 18
 
-    -- Pestañas
     local TabBar = Instance.new("ScrollingFrame")
     TabBar.Parent = MainFrame
     TabBar.BackgroundTransparency = 1
@@ -105,14 +102,12 @@ function Library:AddWindow(title, options)
         TabBar.CanvasSize = UDim2.new(0, TabList.AbsoluteContentSize.X + 10, 0, 0)
     end)
 
-    -- Contenedor de Páginas
     local TabContainer = Instance.new("Frame")
     TabContainer.Parent = MainFrame
     TabContainer.BackgroundTransparency = 1
     TabContainer.Position = UDim2.new(0, 10, 0, 80)
     TabContainer.Size = UDim2.new(1, -20, 1, -90)
 
-    -- Arrastre de Ventana
     local dragging, dragStart, startPos
     TitleBar.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -137,7 +132,6 @@ function Library:AddWindow(title, options)
         end
     end)
 
-    -- Minimizar
     local collapsed = false
     ToggleBtn.MouseButton1Click:Connect(function()
         collapsed = not collapsed
@@ -159,7 +153,6 @@ function Library:AddWindow(title, options)
 
     function WindowMethods:AddTab(tabName, customColor)
         local tabColor = customColor or mainColor
-
         local TabBtn = Instance.new("TextButton")
         TabBtn.Parent = TabBar
         TabBtn.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
@@ -216,11 +209,10 @@ function Library:AddWindow(title, options)
             TabBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 50)
         end
 
-        local function createElementLibrary(parentContainer, isFolderContainer)
+        local function createElementLibrary(parentContainer)
             local ContainerElements = {}
             local LayoutIndex = 1
 
-            -- Botón
             function ContainerElements:AddButton(btnText, callback)
                 callback = callback or function() end
                 local Btn = Instance.new("TextButton")
@@ -255,7 +247,6 @@ function Library:AddWindow(title, options)
                 return Btn
             end
 
-            -- Switch (Toggle)
             function ContainerElements:AddSwitch(toggleText, callback)
                 callback = callback or function() end
                 local toggled = false
@@ -327,7 +318,6 @@ function Library:AddWindow(title, options)
                 return setmetatable(ToggleMethods, {__index = ToggleFrame})
             end
 
-            -- Label
             function ContainerElements:AddLabel(text)
                 local Label = Instance.new("TextLabel")
                 Label.Parent = parentContainer
@@ -344,7 +334,6 @@ function Library:AddWindow(title, options)
                 return Label
             end
 
-            -- TextBox
             function ContainerElements:AddTextBox(placeholder, callback)
                 callback = callback or function() end
                 local BoxFrame = Instance.new("Frame")
@@ -379,7 +368,6 @@ function Library:AddWindow(title, options)
                 return TextBox
             end
 
-            -- Dropdown
             function ContainerElements:AddDropdown(text, callback)
                 callback = callback or function() end
                 local DropdownFrame = Instance.new("Frame")
@@ -481,7 +469,6 @@ function Library:AddWindow(title, options)
                 return DropdownMethods
             end
 
-            -- Soporte para Folders
             function ContainerElements:AddFolder(folderName)
                 local FolderFrame = Instance.new("Frame")
                 FolderFrame.Parent = parentContainer
@@ -538,16 +525,197 @@ function Library:AddWindow(title, options)
                 end)
 
                 updateCanvasSize()
-                return createElementLibrary(FolderContent, true)
+                return createElementLibrary(FolderContent)
             end
 
             return ContainerElements
         end
 
-        return createElementLibrary(PageScroller, false)
+        return createElementLibrary(PageScroller)
     end
 
     return WindowMethods
 end
 
-return Library
+-- ========================================================
+-- SCRIPT DE MUSCLE LEGENDS ADAPTADO
+-- ========================================================
+local player = game.Players.LocalPlayer
+local displayName = player.DisplayName or player.Name
+
+local window = Library:AddWindow("script new| Bienvenid@ " .. displayName, {
+    main_color = Color3.fromRGB(255, 0, 0),
+    min_size = Vector2.new(450, 350)
+})
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
+local Stats = game:GetService("Stats")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+local LocalPlayer = Players.LocalPlayer
+
+local MainTab = window:AddTab("Principal")
+MainTab:AddLabel("Important:")
+
+MainTab:AddSwitch("Anti Fling", function(bool)
+    if bool then
+        local character = game.Workspace:FindFirstChild(LocalPlayer.Name)
+        if character then
+            local rootPart = character:FindFirstChild("HumanoidRootPart")
+            if rootPart then
+                local bodyVelocity = Instance.new("BodyVelocity")
+                bodyVelocity.MaxForce = Vector3.new(100000, 0, 100000)
+                bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+                bodyVelocity.P = 1250
+                bodyVelocity.Parent = rootPart
+            end
+        end
+    else
+        local character = game.Workspace:FindFirstChild(LocalPlayer.Name)
+        if character then
+            local rootPart = character:FindFirstChild("HumanoidRootPart")
+            if rootPart then
+                local existingVelocity = rootPart:FindFirstChild("BodyVelocity")
+                if existingVelocity and existingVelocity.MaxForce == Vector3.new(100000, 0, 100000) then
+                    existingVelocity:Destroy()
+                end
+            end
+        end
+    end
+end)
+
+local lockRunning = false
+local lockConnection
+
+local lockSwitch = MainTab:AddSwitch("Lock Position", function(Value)
+    if Value then
+        lockRunning = true
+        lockConnection = game:GetService("RunService").Heartbeat:Connect(function()
+            local char = player.Character
+            if not char or not char:FindFirstChild("HumanoidRootPart") or not char:FindFirstChildOfClass("Humanoid") then return end
+
+            local hrp = char.HumanoidRootPart
+            local humanoid = char:FindFirstChildOfClass("Humanoid")
+
+            if not humanoid or not hrp then return end
+
+            if not humanoid:FindFirstChild("LockState") then
+                humanoid.WalkSpeed = 0
+                humanoid.JumpPower = 0
+                humanoid.AutoRotate = false
+                humanoid:ChangeState(Enum.HumanoidStateType.Physics)
+                local marker = Instance.new("BoolValue", humanoid)
+                marker.Name = "LockState"
+                marker.Value = true
+                humanoid:SetAttribute("LockCFrame", hrp.CFrame)
+            end
+
+            local savedCFrame = humanoid:GetAttribute("LockCFrame")
+            if savedCFrame then
+                hrp.Velocity = Vector3.zero
+                hrp.RotVelocity = Vector3.zero
+                hrp.CFrame = savedCFrame
+            end
+        end)
+    else
+        lockRunning = false
+        if lockConnection then
+            lockConnection:Disconnect()
+            lockConnection = nil
+        end
+        local char = player.Character
+        if char then
+            local humanoid = char:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                humanoid.WalkSpeed = 250
+                humanoid.JumpPower = 50
+                humanoid.AutoRotate = true
+                humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+                if humanoid:FindFirstChild("LockState") then
+                    humanoid.LockState:Destroy()
+                end
+                humanoid:SetAttribute("LockCFrame", nil)
+            end
+        end
+    end
+end)
+lockSwitch:Set(false)
+
+local showpetsswitch = MainTab:AddSwitch("Show Pets", function(bool)
+    if player:FindFirstChild("hidePets") then
+        player.hidePets.Value = bool
+    end
+end)
+showpetsswitch:Set(false)
+
+local showotherpetsswitch = MainTab:AddSwitch("Show Other Pets", function(bool)
+    if player:FindFirstChild("showOtherPetsOn") then
+        player.showOtherPetsOn.Value = bool
+    end
+end)
+showotherpetsswitch:Set(false)
+
+MainTab:AddLabel("Misc:")
+
+MainTab:AddSwitch("Infinite Jump", function(bool)
+    _G.InfiniteJump = bool
+    if bool then
+        local InfiniteJumpConnection
+        InfiniteJumpConnection = UserInputService.JumpRequest:Connect(function()
+            if _G.InfiniteJump then
+                LocalPlayer.Character:FindFirstChildOfClass("Humanoid"):ChangeState("Jumping")
+            else
+                InfiniteJumpConnection:Disconnect()
+            end
+        end)
+    end
+end)
+
+local timeDropdown = MainTab:AddDropdown("Change Time", function(selection)
+    local lighting = game:GetService("Lighting")
+    if selection == "Night" then
+        lighting.ClockTime = 0
+    elseif selection == "Day" then
+        lighting.ClockTime = 12
+    elseif selection == "Midnight" then
+        lighting.ClockTime = 6
+    end
+end)
+timeDropdown:Add("Night")
+timeDropdown:Add("Day")
+timeDropdown:Add("Midnight")
+
+local AutoFarm = window:AddTab("Farm Op")
+getgenv()._AutoRepFarmEnabled = false  
+
+AutoFarm:AddSwitch("Strength Op", function(state)
+    getgenv()._AutoRepFarmEnabled = state
+end)
+
+task.spawn(function()
+    while true do
+        if getgenv()._AutoRepFarmEnabled and LocalPlayer:FindFirstChild("muscleEvent") then
+            for i = 1, 55 do
+                LocalPlayer.muscleEvent:FireServer("rep")
+            end
+        end
+        task.wait()
+    end
+end)
+
+AutoFarm:AddButton("Anti Lag", function()
+    for _, v in pairs(game:GetDescendants()) do
+        if v:IsA("ParticleEmitter") or v:IsA("Smoke") or v:IsA("Fire") or v:IsA("Sparkles") then
+            pcall(function() v.Enabled = false end)
+        end
+    end
+    local lighting = game:GetService("Lighting")
+    lighting.GlobalShadows = false
+    lighting.FogEnd = 9e9
+    lighting.Brightness = 0
+    game:GetService("StarterGui"):SetCore("SendNotification", {
+        Title = "anti lag activado",
+        Text = "Full optimization applied!",
+        Duration = 5
+    })
+end)
