@@ -1,6 +1,6 @@
 -- Cargar la librería (Asegúrate de ejecutar primero el código de tu librería o tenerlo en el mismo script)
 -- Si tienes tu librería guardada en un ModuleScript o globalmente, inicialízala aquí:
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/tu-usuario/tu-repo/main/Library.lua"))() 
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/matiasNss/scirpt-matias/refs/heads/main/libreria"))() 
 -- NOTA: Si vas a pegar todo junto en un solo ejecutable, pon el código de la librería ARRIBA y elimina la línea de arriba.
 
 local Players = game:GetService("Players")
