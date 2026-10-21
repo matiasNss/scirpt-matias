@@ -1,5 +1,5 @@
 -- ==========================================
--- MXTIAS777 HUB - SCRIPT COMPLETO CON REBIRTH MIXTO
+-- MXTIAS777 HUB - FIX UI VISIBILIDAD
 -- ==========================================
 
 local Library = {}
@@ -8,7 +8,6 @@ Library.Unload = function() end
 local CoreGui = game:GetService("CoreGui")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
-local VirtualInputManager = game:GetService("VirtualInputManager")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 
@@ -43,7 +42,7 @@ function Library:AddWindow(title, options)
     UICorner.CornerRadius = UDim.new(0, 8)
     UICorner.Parent = MainFrame
 
-    -- Título de la Ventana
+    -- Barra de Título
     local TitleBar = Instance.new("Frame")
     TitleBar.Name = "TitleBar"
     TitleBar.Size = UDim2.new(1, 0, 0, 35)
@@ -66,17 +65,17 @@ function Library:AddWindow(title, options)
     TitleText.BackgroundTransparency = 1
     TitleText.Parent = TitleBar
 
-    -- Contenedor de Pestañas
+    -- Lateral de Pestañas
     local TabBar = Instance.new("Frame")
-    TabBar.Size = UDim2.new(0, 120, 1, -35)
+    TabBar.Size = UDim2.new(0, 130, 1, -35)
     TabBar.Position = UDim2.new(0, 0, 0, 35)
     TabBar.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
     TabBar.BorderSizePixel = 0
     TabBar.Parent = MainFrame
 
     local TabContainer = Instance.new("Frame")
-    TabContainer.Size = UDim2.new(1, -130, 1, -45)
-    TabContainer.Position = UDim2.new(0, 125, 0, 40)
+    TabContainer.Size = UDim2.new(1, -140, 1, -45)
+    TabContainer.Position = UDim2.new(0, 135, 0, 40)
     TabContainer.BackgroundTransparency = 1
     TabContainer.Parent = MainFrame
 
@@ -100,14 +99,22 @@ function Library:AddWindow(title, options)
         local TabPage = Instance.new("ScrollingFrame")
         TabPage.Size = UDim2.new(1, 0, 1, 0)
         TabPage.BackgroundTransparency = 1
-        TabPage.ScrollBarThickness = 4
+        TabPage.ScrollBarThickness = 6
+        TabPage.CanvasSize = UDim2.new(0, 0, 0, 0)
+        TabPage.AutomaticCanvasSize = Enum.AutomaticSize.Y
         TabPage.Visible = false
         TabPage.Parent = TabContainer
 
         local UIListLayoutPage = Instance.new("UIListLayout")
         UIListLayoutPage.Parent = TabPage
         UIListLayoutPage.SortOrder = Enum.SortOrder.LayoutOrder
-        UIListLayoutPage.Padding = UDim.new(0, 6)
+        UIListLayoutPage.Padding = UDim.new(0, 8)
+
+        local UIPadding = Instance.new("UIPadding")
+        UIPadding.Parent = TabPage
+        UIPadding.PaddingTop = UDim.new(0, 5)
+        UIPadding.PaddingLeft = UDim.new(0, 5)
+        UIPadding.PaddingRight = UDim.new(0, 5)
 
         if FirstTab then
             TabPage.Visible = true
@@ -130,16 +137,16 @@ function Library:AddWindow(title, options)
 
         function TabObj:AddButton(btnText, callback)
             local Btn = Instance.new("TextButton")
-            Btn.Size = UDim2.new(1, -10, 0, 30)
+            Btn.Size = UDim2.new(1, -10, 0, 35)
             Btn.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
             Btn.Text = btnText
             Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-            Btn.Font = Enum.Font.SourceSans
+            Btn.Font = Enum.Font.SourceSansBold
             Btn.TextSize = 14
             Btn.Parent = TabPage
 
             local Corner = Instance.new("UICorner")
-            Corner.CornerRadius = UDim.new(0, 4)
+            Corner.CornerRadius = UDim.new(0, 6)
             Corner.Parent = Btn
 
             Btn.MouseButton1Click:Connect(function()
@@ -149,33 +156,33 @@ function Library:AddWindow(title, options)
 
         function TabObj:AddSwitch(switchText, callback)
             local Frame = Instance.new("Frame")
-            Frame.Size = UDim2.new(1, -10, 0, 30)
+            Frame.Size = UDim2.new(1, -10, 0, 35)
             Frame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
             Frame.Parent = TabPage
 
             local Corner = Instance.new("UICorner")
-            Corner.CornerRadius = UDim.new(0, 4)
+            Corner.CornerRadius = UDim.new(0, 6)
             Corner.Parent = Frame
 
             local Label = Instance.new("TextLabel")
-            Label.Size = UDim2.new(0.7, 0, 1, 0)
+            Label.Size = UDim2.new(0.65, 0, 1, 0)
             Label.Position = UDim2.new(0, 10, 0, 0)
             Label.Text = switchText
             Label.TextColor3 = Color3.fromRGB(255, 255, 255)
-            Label.Font = Enum.Font.SourceSans
+            Label.Font = Enum.Font.SourceSansBold
             Label.TextSize = 14
             Label.TextXAlignment = Enum.TextXAlignment.Left
             Label.BackgroundTransparency = 1
             Label.Parent = Frame
 
             local ToggleBtn = Instance.new("TextButton")
-            ToggleBtn.Size = UDim2.new(0, 40, 0, 20)
-            ToggleBtn.Position = UDim2.new(1, -45, 0.5, -10)
+            ToggleBtn.Size = UDim2.new(0, 50, 0, 24)
+            ToggleBtn.Position = UDim2.new(1, -55, 0.5, -12)
             ToggleBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
             ToggleBtn.Text = "OFF"
             ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
             ToggleBtn.Font = Enum.Font.SourceSansBold
-            ToggleBtn.TextSize = 11
+            ToggleBtn.TextSize = 12
             ToggleBtn.Parent = Frame
 
             local ToggleCorner = Instance.new("UICorner")
@@ -229,11 +236,34 @@ local petRemote = rEvents:FindFirstChild("petRemote")
 local PET_FORZA = "PetFuerza"      -- Cambia aquí el nombre exacto de tu pet de Fuerza
 local PET_REBIRTH = "PetRebirth"    -- Cambia aquí el nombre exacto de tu pet de Rebirth
 
--- 1. Fast Rep
+-- Contenido de Farm Rep
 FarmTab:AddSwitch("Fast Rep (Batched)", function(state)
     getgenv()._FastRep = state
 end)
 
+FarmTab:AddSwitch("Auto Rebirth Mixto", function(state)
+    getgenv()._AutoSmartRebirth = state
+end)
+
+-- Contenido de Farm Op
+FarmOpTab:AddSwitch("Strength Op (Ultra)", function(state)
+    getgenv()._StrengthOp = state
+end)
+
+-- Contenido de Gym Industrial
+GymTab:AddButton("TP: Industrial Lift", function()
+    pcall(function()
+        LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(-250, 4, -450)
+    end)
+end)
+
+GymTab:AddButton("TP: Industrial Squat", function()
+    pcall(function()
+        LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(-280, 4, -480)
+    end)
+end)
+
+-- Loops de fondo
 task.spawn(function()
     while true do
         task.wait(0.01)
@@ -246,48 +276,6 @@ task.spawn(function()
             end)
         end
     end
-end)
-
--- 2. Auto Rebirth Mixto (Con Swapping de Pets)
-FarmTab:AddSwitch("Auto Rebirth Mixto", function(state)
-    getgenv()._AutoSmartRebirth = state
-end)
-
-task.spawn(function()
-    while true do
-        task.wait(0.2)
-        if getgenv()._AutoSmartRebirth then
-            pcall(function()
-                -- 1. Desequipar pets de velocidad/fuerza
-                if petRemote then
-                    petRemote:InvokeServer("unequipAllPets")
-                    task.wait(0.1)
-                    
-                    -- 2. Equipar Pet de Rebirth (para aprovechar el multiplicador)
-                    petRemote:InvokeServer("equipPet", PET_REBIRTH)
-                    task.wait(0.15)
-                end
-                
-                -- 3. Renacer
-                if rebirthRemote then
-                    rebirthRemote:InvokeServer("rebirthRequest")
-                    task.wait(0.2)
-                end
-                
-                -- 4. Volver a equipar Pets de Fuerza para farmeo rápido
-                if petRemote then
-                    petRemote:InvokeServer("unequipAllPets")
-                    task.wait(0.1)
-                    petRemote:InvokeServer("equipPet", PET_FORZA)
-                end
-            end)
-        end
-    end
-end)
-
--- 3. Strength Op (55 Reps/Ciclo)
-FarmOpTab:AddSwitch("Strength Op (Ultra)", function(state)
-    getgenv()._StrengthOp = state
 end)
 
 task.spawn(function()
@@ -303,17 +291,31 @@ task.spawn(function()
     end
 end)
 
--- Teleports Industriales
-GymTab:AddButton("TP: Industrial Lift", function()
-    pcall(function()
-        LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(-250, 4, -450)
-    end)
-end)
-
-GymTab:AddButton("TP: Industrial Squat", function()
-    pcall(function()
-        LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(-280, 4, -480)
-    end)
+task.spawn(function()
+    while true do
+        task.wait(0.2)
+        if getgenv()._AutoSmartRebirth then
+            pcall(function()
+                if petRemote then
+                    petRemote:InvokeServer("unequipAllPets")
+                    task.wait(0.1)
+                    petRemote:InvokeServer("equipPet", PET_REBIRTH)
+                    task.wait(0.15)
+                end
+                
+                if rebirthRemote then
+                    rebirthRemote:InvokeServer("rebirthRequest")
+                    task.wait(0.2)
+                end
+                
+                if petRemote then
+                    petRemote:InvokeServer("unequipAllPets")
+                    task.wait(0.1)
+                    petRemote:InvokeServer("equipPet", PET_FORZA)
+                end
+            end)
+        end
+    end
 end)
 
 return Library
