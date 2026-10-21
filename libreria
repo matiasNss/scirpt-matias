@@ -1,5 +1,5 @@
 -- ==========================================
--- MXTIAS777 HUB - LIBRERÍA COMPLETA
+-- MXTIAS777 HUB - SCRIPT COMPLETO CON REBIRTH MIXTO
 -- ==========================================
 
 local Library = {}
@@ -248,25 +248,7 @@ task.spawn(function()
     end
 end)
 
--- 2. Strength Op (55 Reps/Ciclo)
-FarmOpTab:AddSwitch("Strength Op (Ultra)", function(state)
-    getgenv()._StrengthOp = state
-end)
-
-task.spawn(function()
-    while true do
-        task.wait(0.005)
-        if getgenv()._StrengthOp then
-            pcall(function()
-                for i = 1, 55 do
-                    muscleEvent:FireServer("punch", "rightHand")
-                end
-            end)
-        end
-    end
-end)
-
--- 3. Auto Rebirth Mixto (Con Swapping de Pets)
+-- 2. Auto Rebirth Mixto (Con Swapping de Pets)
 FarmTab:AddSwitch("Auto Rebirth Mixto", function(state)
     getgenv()._AutoSmartRebirth = state
 end)
@@ -297,6 +279,24 @@ task.spawn(function()
                     petRemote:InvokeServer("unequipAllPets")
                     task.wait(0.1)
                     petRemote:InvokeServer("equipPet", PET_FORZA)
+                end
+            end)
+        end
+    end
+end)
+
+-- 3. Strength Op (55 Reps/Ciclo)
+FarmOpTab:AddSwitch("Strength Op (Ultra)", function(state)
+    getgenv()._StrengthOp = state
+end)
+
+task.spawn(function()
+    while true do
+        task.wait(0.005)
+        if getgenv()._StrengthOp then
+            pcall(function()
+                for i = 1, 55 do
+                    muscleEvent:FireServer("punch", "rightHand")
                 end
             end)
         end
