@@ -1,5 +1,5 @@
 -- ======================================================
--- MXTIAS HUB 777 - Muscle Legends + Stats Calculator
+-- MXTIAS HUB 777 - Muscle Legends (Con Fast Rep y Calculadora)
 -- ======================================================
 
 local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/shlexware/Orion/main/source')))()
@@ -11,38 +11,72 @@ local Window = OrionLib:MakeWindow({
 })
 
 -- Variables de Estado
-local AutoFarm = false
+local FastRepEnabled = false
+local RepsAmount = 1 -- Cantidad por ciclo
 local AutoRebirth = false
 local AutoPunch = false
 
--- Pestaña Principal (Farm)
-local MainTab = Window:MakeTab({
-    Name = "Farm Automático",
+-- ======================================================
+-- PESTAÑA: FAST REP
+-- ======================================================
+local FastRepTab = Window:MakeTab({
+    Name = "Fast Rep",
     Icon = "rbxassetid://4483345998",
     PremiumOnly = false
 })
 
-MainTab:AddSection({
-    Name = "Acciones de Entrenamiento"
+FastRepTab:AddSection({
+    Name = "Configuración de Repeticiones Rápidas"
 })
 
-MainTab:AddToggle({
-    Name = "Auto Lift (Fuerza)",
+FastRepTab:AddToggle({
+    Name = "Activar Fast Rep",
     Default = false,
     Callback = function(Value)
-        AutoFarm = Value
+        FastRepEnabled = Value
         task.spawn(function()
-            while AutoFarm do
-                task.wait(0.1)
+            while FastRepEnabled do
+                task.wait() -- Sin interrupciones artificiales largas
                 pcall(function()
-                    game:GetService("Players").LocalPlayer.muscleEvent:FireServer("rep")
+                    local muscleEvent = game:GetService("Players").LocalPlayer:FindFirstChild("muscleEvent")
+                    if muscleEvent then
+                        for i = 1, RepsAmount do
+                            muscleEvent:FireServer("rep")
+                        end
+                    end
                 end)
             end
         end)
     end    
 })
 
-MainTab:AddToggle({
+FastRepTab:AddSlider({
+    Name = "Cantidad de Reps por ciclo",
+    Min = 1,
+    Max = 50,
+    Default = 1,
+    Color = Color3.fromRGB(0, 255, 128),
+    Increment = 1,
+    ValueName = "Reps",
+    Callback = function(Value)
+        RepsAmount = Value
+    end    
+})
+
+-- ======================================================
+-- PESTAÑA: AUTO REBIRTH / PUNCH
+-- ======================================================
+local AutoTab = Window:MakeTab({
+    Name = "Auto Rebirths",
+    Icon = "rbxassetid://4483345998",
+    PremiumOnly = false
+})
+
+AutoTab:AddSection({
+    Name = "Automatización"
+})
+
+AutoTab:AddToggle({
     Name = "Auto Puñetazo",
     Default = false,
     Callback = function(Value)
@@ -63,7 +97,7 @@ MainTab:AddToggle({
     end    
 })
 
-MainTab:AddToggle({
+AutoTab:AddToggle({
     Name = "Auto Rebirth",
     Default = false,
     Callback = function(Value)
@@ -79,7 +113,9 @@ MainTab:AddToggle({
     end    
 })
 
--- Pestaña Calculadora de Estadísticas
+-- ======================================================
+-- PESTAÑA: CALCULADORA DE ESTADÍSTICAS
+-- ======================================================
 local StatsTab = Window:MakeTab({
     Name = "Calculadora Stats",
     Icon = "rbxassetid://4483345998",
@@ -87,10 +123,9 @@ local StatsTab = Window:MakeTab({
 })
 
 StatsTab:AddSection({
-    Name = "Proyección de Fuerza y Durabilidad"
+    Name = "Proyección de Fuerza"
 })
 
--- Etiquetas de la Calculadora
 local ForcePerHourLabel = StatsTab:AddLabel("Fuerza por Hora: Calculando...")
 local ForcePerDayLabel = StatsTab:AddLabel("Fuerza por Día: Calculando...")
 local ForcePerWeekLabel = StatsTab:AddLabel("Fuerza por Semana: Calculando...")
@@ -103,7 +138,6 @@ local DurabilityPerHourLabel = StatsTab:AddLabel("Durabilidad por Hora: Calculan
 local DurabilityPerDayLabel = StatsTab:AddLabel("Durabilidad por Día: Calculando...")
 local DurabilityPerWeekLabel = StatsTab:AddLabel("Durabilidad por Semana: Calculando...")
 
--- Lógica de la Calculadora en tiempo real
 task.spawn(function()
     local player = game:GetService("Players").LocalPlayer
     local leaderstats = player:WaitForChild("leaderstats")
@@ -124,19 +158,16 @@ task.spawn(function()
                 local strengthGained = currentStrength - initialStrength
                 local durabilityGained = currentDurability - initialDurability
                 
-                -- Fuerza por segundo/hora/día/semana
                 local strengthPerSec = strengthGained / timeElapsed
                 local strHour = math.floor(strengthPerSec * 3600)
                 local strDay = math.floor(strengthPerSec * 86400)
                 local strWeek = math.floor(strengthPerSec * 604800)
                 
-                -- Durabilidad por segundo/hora/día/semana
                 local durabilityPerSec = durabilityGained / timeElapsed
                 local durHour = math.floor(durabilityPerSec * 3600)
                 local durDay = math.floor(durabilityPerSec * 86400)
                 local durWeek = math.floor(durabilityPerSec * 604800)
                 
-                -- Actualizar Interfaz
                 ForcePerHourLabel:Set("Fuerza por Hora: " .. tostring(strHour))
                 ForcePerDayLabel:Set("Fuerza por Día: " .. tostring(strDay))
                 ForcePerWeekLabel:Set("Fuerza por Semana: " .. tostring(strWeek))
@@ -149,7 +180,9 @@ task.spawn(function()
     end
 end)
 
--- Pestaña Ajustes
+-- ======================================================
+-- PESTAÑA: AJUSTES
+-- ======================================================
 local MiscTab = Window:MakeTab({
     Name = "Ajustes",
     Icon = "rbxassetid://4483345998",
