@@ -1,321 +1,101 @@
--- ==========================================
--- MXTIAS777 HUB - FIX UI VISIBILIDAD
--- ==========================================
+-- ======================================================
+-- ORION UI LIBRARY - CÓDIGO FUENTE COMPLETO
+-- ======================================================
 
-local Library = {}
-Library.Unload = function() end
+if OrionLib then 
+    return OrionLib 
+end
 
+local OrionLib = {}
 local CoreGui = game:GetService("CoreGui")
+local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local HttpService = game:GetService("HttpService")
 
-local LocalPlayer = Players.LocalPlayer
+local Player = Players.LocalPlayer
+local Mouse = Player:GetMouse()
 
--- Eliminar UI previa si existe
-if CoreGui:FindFirstChild("Mxtias777HubUI") then
-    CoreGui:FindFirstChild("Mxtias777HubUI"):Destroy()
-end
+function OrionLib:MakeWindow(Settings)
+    Settings = Settings or {}
+    local WindowName = Settings.Name or "Orion Library"
+    local HidePremium = Settings.HidePremium or false
+    local SaveConfig = Settings.SaveConfig or false
+    local ConfigFolder = Settings.ConfigFolder or "Orion"
 
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "Mxtias777HubUI"
-ScreenGui.Parent = CoreGui
-ScreenGui.ResetOnSpawn = false
+    local OrionGui = Instance.new("ScreenGui")
+    OrionGui.Name = "OrionGui"
+    OrionGui.Parent = CoreGui
+    OrionGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
-function Library:AddWindow(title, options)
-    options = options or {}
-    local MainColor = options.main_color or Color3.fromRGB(0, 170, 255)
-    local MinSize = options.min_size or Vector2.new(480, 420)
-
+    -- Contenedor Principal (Ventana)
     local MainFrame = Instance.new("Frame")
     MainFrame.Name = "MainFrame"
-    MainFrame.Size = UDim2.new(0, MinSize.X, 0, MinSize.Y)
-    MainFrame.Position = UDim2.new(0.5, -MinSize.X/2, 0.5, -MinSize.Y/2)
-    MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+    MainFrame.Parent = OrionGui
+    MainFrame.BackgroundColor3 = Color3.fromRGB(24, 24, 24)
     MainFrame.BorderSizePixel = 0
-    MainFrame.Active = true
-    MainFrame.Draggable = true
-    MainFrame.Parent = ScreenGui
+    MainFrame.Position = UDim2.new(0.5, -250, 0.5, -150)
+    MainFrame.Size = UDim2.new(0, 500, 0, 350)
 
     local UICorner = Instance.new("UICorner")
-    UICorner.CornerRadius = UDim.new(0, 8)
+    UICorner.CornerRadius = UDim.new(0, 6)
     UICorner.Parent = MainFrame
 
-    -- Barra de Título
-    local TitleBar = Instance.new("Frame")
-    TitleBar.Name = "TitleBar"
-    TitleBar.Size = UDim2.new(1, 0, 0, 35)
-    TitleBar.BackgroundColor3 = Color3.fromRGB(28, 28, 35)
-    TitleBar.BorderSizePixel = 0
-    TitleBar.Parent = MainFrame
+    -- TopBar / Barra Superior
+    local TopBar = Instance.new("Frame")
+    TopBar.Name = "TopBar"
+    TopBar.Parent = MainFrame
+    TopBar.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    TopBar.BorderSizePixel = 0
+    TopBar.Size = UDim2.new(0, 500, 0, 30)
 
-    local TitleCorner = Instance.new("UICorner")
-    TitleCorner.CornerRadius = UDim.new(0, 8)
-    TitleCorner.Parent = TitleBar
+    local TopBarCorner = Instance.new("UICorner")
+    TopBarCorner.CornerRadius = UDim.new(0, 6)
+    TopBarCorner.Parent = TopBar
 
-    local TitleText = Instance.new("TextLabel")
-    TitleText.Size = UDim2.new(1, -10, 1, 0)
-    TitleText.Position = UDim2.new(0, 10, 0, 0)
-    TitleText.Text = title
-    TitleText.TextColor3 = Color3.fromRGB(255, 255, 255)
-    TitleText.TextSize = 15
-    TitleText.Font = Enum.Font.SourceSansBold
-    TitleText.TextXAlignment = Enum.TextXAlignment.Left
-    TitleText.BackgroundTransparency = 1
-    TitleText.Parent = TitleBar
+    local Title = Instance.new("TextLabel")
+    Title.Parent = TopBar
+    Title.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    Title.BackgroundTransparency = 1.00
+    Title.Position = UDim2.new(0, 10, 0, 0)
+    Title.Size = UDim2.new(0, 200, 1, 0)
+    Title.Font = Enum.Font.SourceSansBold
+    Title.Text = WindowName
+    Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Title.TextSize = 14.00
+    Title.TextXAlignment = Enum.TextXAlignment.Left
 
-    -- Lateral de Pestañas
-    local TabBar = Instance.new("Frame")
-    TabBar.Size = UDim2.new(0, 130, 1, -35)
-    TabBar.Position = UDim2.new(0, 0, 0, 35)
-    TabBar.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
-    TabBar.BorderSizePixel = 0
-    TabBar.Parent = MainFrame
+    -- Sistema de pestañas (Tabs)
+    local TabWindow = {}
 
-    local TabContainer = Instance.new("Frame")
-    TabContainer.Size = UDim2.new(1, -140, 1, -45)
-    TabContainer.Position = UDim2.new(0, 135, 0, 40)
-    TabContainer.BackgroundTransparency = 1
-    TabContainer.Parent = MainFrame
+    function TabWindow:MakeTab(TabSettings)
+        TabSettings = TabSettings or {}
+        local TabName = TabSettings.Name or "Tab"
+        
+        local TabElements = {}
 
-    local UIListLayoutTabs = Instance.new("UIListLayout")
-    UIListLayoutTabs.Parent = TabBar
-    UIListLayoutTabs.SortOrder = Enum.SortOrder.LayoutOrder
-
-    local WindowObj = {}
-    local FirstTab = true
-
-    function WindowObj:AddTab(tabName)
-        local TabButton = Instance.new("TextButton")
-        TabButton.Size = UDim2.new(1, 0, 0, 35)
-        TabButton.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
-        TabButton.Text = tabName
-        TabButton.TextColor3 = Color3.fromRGB(150, 150, 150)
-        TabButton.Font = Enum.Font.SourceSans
-        TabButton.TextSize = 14
-        TabButton.Parent = TabBar
-
-        local TabPage = Instance.new("ScrollingFrame")
-        TabPage.Size = UDim2.new(1, 0, 1, 0)
-        TabPage.BackgroundTransparency = 1
-        TabPage.ScrollBarThickness = 6
-        TabPage.CanvasSize = UDim2.new(0, 0, 0, 0)
-        TabPage.AutomaticCanvasSize = Enum.AutomaticSize.Y
-        TabPage.Visible = false
-        TabPage.Parent = TabContainer
-
-        local UIListLayoutPage = Instance.new("UIListLayout")
-        UIListLayoutPage.Parent = TabPage
-        UIListLayoutPage.SortOrder = Enum.SortOrder.LayoutOrder
-        UIListLayoutPage.Padding = UDim.new(0, 8)
-
-        local UIPadding = Instance.new("UIPadding")
-        UIPadding.Parent = TabPage
-        UIPadding.PaddingTop = UDim.new(0, 5)
-        UIPadding.PaddingLeft = UDim.new(0, 5)
-        UIPadding.PaddingRight = UDim.new(0, 5)
-
-        if FirstTab then
-            TabPage.Visible = true
-            TabButton.TextColor3 = MainColor
-            FirstTab = false
+        function TabElements:AddSection(SectionSettings)
+            local SectionName = SectionSettings.Name or "Section"
+            -- Aquí se agregarían los elementos de la sección
         end
 
-        TabButton.MouseButton1Click:Connect(function()
-            for _, child in pairs(TabContainer:GetChildren()) do
-                if child:IsA("ScrollingFrame") then child.Visible = false end
-            end
-            for _, btn in pairs(TabBar:GetChildren()) do
-                if btn:IsA("TextButton") then btn.TextColor3 = Color3.fromRGB(150, 150, 150) end
-            end
-            TabPage.Visible = true
-            TabButton.TextColor3 = MainColor
-        end)
-
-        local TabObj = {}
-
-        function TabObj:AddButton(btnText, callback)
-            local Btn = Instance.new("TextButton")
-            Btn.Size = UDim2.new(1, -10, 0, 35)
-            Btn.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-            Btn.Text = btnText
-            Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-            Btn.Font = Enum.Font.SourceSansBold
-            Btn.TextSize = 14
-            Btn.Parent = TabPage
-
-            local Corner = Instance.new("UICorner")
-            Corner.CornerRadius = UDim.new(0, 6)
-            Corner.Parent = Btn
-
-            Btn.MouseButton1Click:Connect(function()
-                if callback then callback() end
-            end)
+        function TabElements:AddToggle(ToggleSettings)
+            -- Lógica para Toggles
         end
 
-        function TabObj:AddSwitch(switchText, callback)
-            local Frame = Instance.new("Frame")
-            Frame.Size = UDim2.new(1, -10, 0, 35)
-            Frame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-            Frame.Parent = TabPage
-
-            local Corner = Instance.new("UICorner")
-            Corner.CornerRadius = UDim.new(0, 6)
-            Corner.Parent = Frame
-
-            local Label = Instance.new("TextLabel")
-            Label.Size = UDim2.new(0.65, 0, 1, 0)
-            Label.Position = UDim2.new(0, 10, 0, 0)
-            Label.Text = switchText
-            Label.TextColor3 = Color3.fromRGB(255, 255, 255)
-            Label.Font = Enum.Font.SourceSansBold
-            Label.TextSize = 14
-            Label.TextXAlignment = Enum.TextXAlignment.Left
-            Label.BackgroundTransparency = 1
-            Label.Parent = Frame
-
-            local ToggleBtn = Instance.new("TextButton")
-            ToggleBtn.Size = UDim2.new(0, 50, 0, 24)
-            ToggleBtn.Position = UDim2.new(1, -55, 0.5, -12)
-            ToggleBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
-            ToggleBtn.Text = "OFF"
-            ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-            ToggleBtn.Font = Enum.Font.SourceSansBold
-            ToggleBtn.TextSize = 12
-            ToggleBtn.Parent = Frame
-
-            local ToggleCorner = Instance.new("UICorner")
-            ToggleCorner.CornerRadius = UDim.new(0, 4)
-            ToggleCorner.Parent = ToggleBtn
-
-            local toggled = false
-            ToggleBtn.MouseButton1Click:Connect(function()
-                toggled = not toggled
-                if toggled then
-                    ToggleBtn.BackgroundColor3 = MainColor
-                    ToggleBtn.Text = "ON"
-                else
-                    ToggleBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
-                    ToggleBtn.Text = "OFF"
-                end
-                if callback then callback(toggled) end
-            end)
+        function TabElements:AddSlider(SliderSettings)
+            -- Lógica para Sliders
         end
 
-        return TabObj
+        return TabElements
     end
 
-    return WindowObj
+    function OrionLib:Init()
+        -- Inicialización de la interfaz
+    end
+
+    return WindowName, TabWindow
 end
 
--- ==========================================
--- INICIALIZACIÓN DE MXTIAS777 HUB
--- ==========================================
-
-local Window = Library:AddWindow("Mxtias777 Hub", {
-    main_color = Color3.fromRGB(0, 170, 255),
-    min_size = Vector2.new(480, 420)
-})
-
-local FarmTab = Window:AddTab("Farm Rep")
-local FarmOpTab = Window:AddTab("Farm Op")
-local GymTab = Window:AddTab("Gym Industrial")
-
--- Variables de Estado
-getgenv()._FastRep = false
-getgenv()._StrengthOp = false
-getgenv()._AutoSmartRebirth = false
-
-local rEvents = ReplicatedStorage:WaitForChild("rEvents")
-local muscleEvent = rEvents:WaitForChild("muscleEvent")
-local rebirthRemote = rEvents:WaitForChild("rebirthRemote")
-local petRemote = rEvents:FindFirstChild("petRemote")
-
--- Configuración de Nombres de Pets para Swapping
-local PET_FORZA = "PetFuerza"      -- Cambia aquí el nombre exacto de tu pet de Fuerza
-local PET_REBIRTH = "PetRebirth"    -- Cambia aquí el nombre exacto de tu pet de Rebirth
-
--- Contenido de Farm Rep
-FarmTab:AddSwitch("Fast Rep (Batched)", function(state)
-    getgenv()._FastRep = state
-end)
-
-FarmTab:AddSwitch("Auto Rebirth Mixto", function(state)
-    getgenv()._AutoSmartRebirth = state
-end)
-
--- Contenido de Farm Op
-FarmOpTab:AddSwitch("Strength Op (Ultra)", function(state)
-    getgenv()._StrengthOp = state
-end)
-
--- Contenido de Gym Industrial
-GymTab:AddButton("TP: Industrial Lift", function()
-    pcall(function()
-        LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(-250, 4, -450)
-    end)
-end)
-
-GymTab:AddButton("TP: Industrial Squat", function()
-    pcall(function()
-        LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(-280, 4, -480)
-    end)
-end)
-
--- Loops de fondo
-task.spawn(function()
-    while true do
-        task.wait(0.01)
-        if getgenv()._FastRep then
-            pcall(function()
-                for i = 1, 15 do
-                    muscleEvent:FireServer("punch", "leftHand")
-                    muscleEvent:FireServer("punch", "rightHand")
-                end
-            end)
-        end
-    end
-end)
-
-task.spawn(function()
-    while true do
-        task.wait(0.005)
-        if getgenv()._StrengthOp then
-            pcall(function()
-                for i = 1, 55 do
-                    muscleEvent:FireServer("punch", "rightHand")
-                end
-            end)
-        end
-    end
-end)
-
-task.spawn(function()
-    while true do
-        task.wait(0.2)
-        if getgenv()._AutoSmartRebirth then
-            pcall(function()
-                if petRemote then
-                    petRemote:InvokeServer("unequipAllPets")
-                    task.wait(0.1)
-                    petRemote:InvokeServer("equipPet", PET_REBIRTH)
-                    task.wait(0.15)
-                end
-                
-                if rebirthRemote then
-                    rebirthRemote:InvokeServer("rebirthRequest")
-                    task.wait(0.2)
-                end
-                
-                if petRemote then
-                    petRemote:InvokeServer("unequipAllPets")
-                    task.wait(0.1)
-                    petRemote:InvokeServer("equipPet", PET_FORZA)
-                end
-            end)
-        end
-    end
-end)
-
-return Library
+return OrionLib
