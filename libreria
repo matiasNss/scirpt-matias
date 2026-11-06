@@ -1,6 +1,5 @@
 -- ======================================================
--- NOVALIB — Librería UI (versión separada)
--- Devuelve la tabla Nova al cargarse con loadstring
+-- NOVALIB — Librería UI
 -- ======================================================
 if _G.NovaLib then pcall(function() _G.NovaLib:Destroy() end); _G.NovaLib = nil end
 
