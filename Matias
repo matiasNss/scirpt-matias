@@ -1,11 +1,9 @@
 -- ======================================================
 -- MUSCLE LEGENDS — Script completo multi-ejecutor
--- Compatible con: Xeno / Delta / Arceus
+-- Xeno / Delta / Arceus
 -- ======================================================
 
--- ======================================================
--- PARCHE DE COMPATIBILIDAD MULTI-EJECUTOR
--- ======================================================
+-- ---------- Parche de compatibilidad ----------
 if not game:IsLoaded() then game.Loaded:Wait() end
 task.wait(0.5)
 
@@ -21,21 +19,16 @@ if not LP then
     LP = Players.LocalPlayer
 end
 
--- Elegir contenedor de GUI según ejecutor
 local parentGui
 local ok1, hui = pcall(function() return gethui() end)
 if ok1 and hui then
     parentGui = hui
 else
     local ok2, core = pcall(function() return game:GetService("CoreGui") end)
-    if ok2 and core then
-        parentGui = core
-    else
-        parentGui = LP:WaitForChild("PlayerGui")
-    end
+    if ok2 and core then parentGui = core
+    else parentGui = LP:WaitForChild("PlayerGui") end
 end
 
--- Compatibilidad Arceus para archivos
 if arceus then
     if not isfile and arceus.isarceusfile then isfile = arceus.isarceusfile end
     if not readfile and arceus.readarceusfile then readfile = arceus.readarceusfile end
@@ -43,10 +36,9 @@ if arceus then
 end
 
 -- ======================================================
--- NOVALIB (UI Library)
+-- NOVALIB
 -- ======================================================
 if _G.NovaLib then pcall(function() _G.NovaLib:Destroy() end); _G.NovaLib = nil end
-
 local Nova = {}
 _G.NovaLib = Nova
 
@@ -87,7 +79,6 @@ function Nova:Notify(settings)
     local title = settings.Title or "Nova"
     local text  = settings.Text  or ""
     local dur   = settings.Duration or 4
-
     local gui = new("ScreenGui", { Name = "NovaNotify", Parent = parentGui, ResetOnSpawn = false })
     local frame = new("Frame", {
         Parent = gui, Size = UDim2.new(0, 260, 0, 70),
@@ -121,7 +112,6 @@ end
 function Nova:MakeWindow(settings)
     settings = settings or {}
     local name = settings.Name or "Nova"
-
     local gui = new("ScreenGui", {
         Name = "NovaGui", Parent = parentGui,
         ResetOnSpawn = false, ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
@@ -175,7 +165,6 @@ function Nova:MakeWindow(settings)
     new("UIPadding", { Parent = content, PaddingRight = UDim.new(0, 6) })
 
     local tabs, activeTab, activeBtn = {}, nil, nil
-
     local function selectTab(tab)
         activeTab = tab
         for _, c in ipairs(content:GetChildren()) do
@@ -187,11 +176,9 @@ function Nova:MakeWindow(settings)
     end
 
     local Window = { Gui = gui, Main = main, Tabs = tabs }
-
     function Window:MakeTab(tabSettings)
         tabSettings = tabSettings or {}
         local tabName = tabSettings.Name or "Tab"
-
         local btn = new("TextButton", {
             Parent = tabBar, Size = UDim2.new(1, 0, 0, 30),
             BackgroundColor3 = Color3.fromRGB(30, 30, 36), BorderSizePixel = 0,
@@ -515,13 +502,12 @@ RbTab:AddSlider({
     Callback = function(v) _G.RebirthDelay = v end,
 })
 
--- ---------- MISC (Anti-AFK) ----------
+-- ---------- MISC ----------
 local MiscTab = Window.Tabs["Misc"]
 MiscTab:AddSection({ Name = "Anti-AFK" })
 
 local antiAfkActivo = false
 local antiAfkThread = nil
-
 local function iniciarAntiAfk()
     if antiAfkActivo then return end
     antiAfkActivo = true
@@ -538,7 +524,6 @@ local function iniciarAntiAfk()
         end
     end)
 end
-
 local function detenerAntiAfk()
     antiAfkActivo = false
     if antiAfkThread then task.cancel(antiAfkThread); antiAfkThread = nil end
@@ -552,7 +537,6 @@ MiscTab:AddToggle({
         else detenerAntiAfk(); Nova:Notify({ Title = "Anti-AFK", Text = "Desactivado", Duration = 3 }) end
     end,
 })
-
 task.spawn(function() task.wait(1); iniciarAntiAfk() end)
 
 MiscTab:AddSection({ Name = "Utilidades" })
@@ -586,7 +570,6 @@ local calcActivo, ultimoStrength, ultimoDurability, ultimoTiempo = false, 0, 0, 
 local tasaStrPorSeg, tasaDurPorSeg = 0, 0
 local muestrasStr, muestrasDur = {}, {}
 local MAX_MUESTRAS = 10
-
 local lblStrRate, lblDurRate, lblStrHour, lblDurHour
 local lblStrDay, lblDurDay, lblStrWeek, lblDurWeek
 
@@ -666,4 +649,23 @@ local resultsFrame = Instance.new("Frame")
 resultsFrame.Parent = CalcTab.Container
 resultsFrame.Size = UDim2.new(1, 0, 0, 200)
 resultsFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
-resultsFrame.BorderSize
+resultsFrame.BorderSizePixel = 0
+Instance.new("UICorner", resultsFrame).CornerRadius = UDim.new(0, 6)
+
+local listLayout = Instance.new("UIListLayout")
+listLayout.Parent = resultsFrame
+listLayout.Padding = UDim.new(0, 4)
+listLayout.SortOrder = Enum.SortOrder.LayoutOrder
+
+local padding = Instance.new("UIPadding")
+padding.Parent = resultsFrame
+padding.PaddingLeft = UDim.new(0, 10)
+padding.PaddingTop = UDim.new(0, 8)
+
+local function crearFila(texto, color)
+    local f = Instance.new("Frame")
+    f.Parent = resultsFrame
+    f.Size = UDim2.new(1, 0, 0, 22)
+    f.BackgroundTransparency = 1
+    local lbl = Instance.new("TextLabel")
+    lbl
