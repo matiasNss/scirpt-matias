@@ -1,27 +1,595 @@
 -- ======================================================
--- TAB CALCULADORA — Strength y Durability
+-- MUSCLE LEGENDS — Script completo multi-ejecutor
+-- Compatible con: Xeno / Delta / Arceus
 -- ======================================================
-local CalcTab = Window:MakeTab({ Name = "Calculadora" })
+
+-- ======================================================
+-- PARCHE DE COMPATIBILIDAD MULTI-EJECUTOR
+-- ======================================================
+if not game:IsLoaded() then game.Loaded:Wait() end
+task.wait(0.5)
+
+local Players           = game:GetService("Players")
+local TweenService      = game:GetService("TweenService")
+local UserInputService  = game:GetService("UserInputService")
+local VirtualUser       = game:GetService("VirtualUser")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local LP = Players.LocalPlayer
+if not LP then
+    Players:GetPropertyChangedSignal("LocalPlayer"):Wait()
+    LP = Players.LocalPlayer
+end
+
+-- Elegir contenedor de GUI según ejecutor
+local parentGui
+local ok1, hui = pcall(function() return gethui() end)
+if ok1 and hui then
+    parentGui = hui
+else
+    local ok2, core = pcall(function() return game:GetService("CoreGui") end)
+    if ok2 and core then
+        parentGui = core
+    else
+        parentGui = LP:WaitForChild("PlayerGui")
+    end
+end
+
+-- Compatibilidad Arceus para archivos
+if arceus then
+    if not isfile and arceus.isarceusfile then isfile = arceus.isarceusfile end
+    if not readfile and arceus.readarceusfile then readfile = arceus.readarceusfile end
+    if not writefile and arceus.writearceusfile then writefile = arceus.writearceusfile end
+end
+
+-- ======================================================
+-- NOVALIB (UI Library)
+-- ======================================================
+if _G.NovaLib then pcall(function() _G.NovaLib:Destroy() end); _G.NovaLib = nil end
+
+local Nova = {}
+_G.NovaLib = Nova
+
+local function new(class, props, children)
+    local inst = Instance.new(class)
+    for k, v in pairs(props or {}) do inst[k] = v end
+    for _, c in ipairs(children or {}) do c.Parent = inst end
+    return inst
+end
+
+local function drag(frame, handle)
+    handle = handle or frame
+    local dragging, dragStart, startPos
+    handle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos  = frame.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then dragging = false end
+            end)
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement
+        or input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = input.Position - dragStart
+            frame.Position = UDim2.new(
+                startPos.X.Scale, startPos.X.Offset + delta.X,
+                startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+end
+
+function Nova:Notify(settings)
+    settings = settings or {}
+    local title = settings.Title or "Nova"
+    local text  = settings.Text  or ""
+    local dur   = settings.Duration or 4
+
+    local gui = new("ScreenGui", { Name = "NovaNotify", Parent = parentGui, ResetOnSpawn = false })
+    local frame = new("Frame", {
+        Parent = gui, Size = UDim2.new(0, 260, 0, 70),
+        Position = UDim2.new(1, -280, 1, -90),
+        BackgroundColor3 = Color3.fromRGB(28, 28, 32),
+        BorderSizePixel = 0, BackgroundTransparency = 1,
+    }, {
+        new("UICorner", { CornerRadius = UDim.new(0, 8) }),
+        new("UIStroke", { Color = Color3.fromRGB(80, 80, 90), Thickness = 1 }),
+    })
+    new("TextLabel", {
+        Parent = frame, BackgroundTransparency = 1,
+        Position = UDim2.new(0, 12, 0, 6), Size = UDim2.new(1, -24, 0, 22),
+        Font = Enum.Font.GothamBold, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left,
+        TextColor3 = Color3.fromRGB(255, 255, 255), Text = title,
+    })
+    new("TextLabel", {
+        Parent = frame, BackgroundTransparency = 1,
+        Position = UDim2.new(0, 12, 0, 28), Size = UDim2.new(1, -24, 0, 36),
+        Font = Enum.Font.Gotham, TextSize = 12, TextWrapped = true,
+        TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top,
+        TextColor3 = Color3.fromRGB(200, 200, 210), Text = text,
+    })
+    TweenService:Create(frame, TweenInfo.new(0.3), { BackgroundTransparency = 0 }):Play()
+    task.delay(dur, function()
+        local t = TweenService:Create(frame, TweenInfo.new(0.3), { BackgroundTransparency = 1 })
+        t:Play(); t.Completed:Wait(); gui:Destroy()
+    end)
+end
+
+function Nova:MakeWindow(settings)
+    settings = settings or {}
+    local name = settings.Name or "Nova"
+
+    local gui = new("ScreenGui", {
+        Name = "NovaGui", Parent = parentGui,
+        ResetOnSpawn = false, ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+    })
+    local main = new("Frame", {
+        Parent = gui, Size = UDim2.new(0, 520, 0, 360),
+        Position = UDim2.new(0.5, -260, 0.5, -180),
+        BackgroundColor3 = Color3.fromRGB(20, 20, 24), BorderSizePixel = 0,
+    }, {
+        new("UICorner", { CornerRadius = UDim.new(0, 8) }),
+        new("UIStroke", { Color = Color3.fromRGB(60, 60, 70), Thickness = 1 }),
+    })
+    local topbar = new("Frame", {
+        Parent = main, Size = UDim2.new(1, 0, 0, 34),
+        BackgroundColor3 = Color3.fromRGB(30, 30, 36), BorderSizePixel = 0,
+    }, { new("UICorner", { CornerRadius = UDim.new(0, 8) }) })
+    new("Frame", {
+        Parent = topbar, Size = UDim2.new(1, 0, 0, 12),
+        Position = UDim2.new(0, 0, 1, -12),
+        BackgroundColor3 = Color3.fromRGB(30, 30, 36), BorderSizePixel = 0,
+    })
+    new("TextLabel", {
+        Parent = topbar, BackgroundTransparency = 1,
+        Position = UDim2.new(0, 14, 0, 0), Size = UDim2.new(1, -60, 1, 0),
+        Font = Enum.Font.GothamBold, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left,
+        TextColor3 = Color3.fromRGB(240, 240, 245), Text = name,
+    })
+    local closeBtn = new("TextButton", {
+        Parent = topbar, Size = UDim2.new(0, 34, 1, 0),
+        Position = UDim2.new(1, -34, 0, 0), BackgroundTransparency = 1,
+        Text = "×", Font = Enum.Font.GothamBold, TextSize = 20,
+        TextColor3 = Color3.fromRGB(255, 120, 120),
+    })
+    closeBtn.MouseButton1Click:Connect(function() gui:Destroy() end)
+    drag(main, topbar)
+
+    local tabBar = new("Frame", {
+        Parent = main, Size = UDim2.new(0, 130, 1, -44),
+        Position = UDim2.new(0, 10, 0, 44), BackgroundTransparency = 1,
+    })
+    new("UIListLayout", { Parent = tabBar, Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder })
+
+    local content = new("ScrollingFrame", {
+        Parent = main, Size = UDim2.new(1, -160, 1, -54),
+        Position = UDim2.new(0, 150, 0, 44), BackgroundTransparency = 1,
+        BorderSizePixel = 0, ScrollBarThickness = 3,
+        ScrollBarImageColor3 = Color3.fromRGB(80, 80, 90),
+        CanvasSize = UDim2.new(0, 0, 0, 0),
+    })
+    new("UIListLayout", { Parent = content, Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder })
+    new("UIPadding", { Parent = content, PaddingRight = UDim.new(0, 6) })
+
+    local tabs, activeTab, activeBtn = {}, nil, nil
+
+    local function selectTab(tab)
+        activeTab = tab
+        for _, c in ipairs(content:GetChildren()) do
+            if c:IsA("ScrollingFrame") then c.Visible = (c == tab.Container) end
+        end
+        if activeBtn then activeBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 36) end
+        activeBtn = tab.Button
+        activeBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+    end
+
+    local Window = { Gui = gui, Main = main, Tabs = tabs }
+
+    function Window:MakeTab(tabSettings)
+        tabSettings = tabSettings or {}
+        local tabName = tabSettings.Name or "Tab"
+
+        local btn = new("TextButton", {
+            Parent = tabBar, Size = UDim2.new(1, 0, 0, 30),
+            BackgroundColor3 = Color3.fromRGB(30, 30, 36), BorderSizePixel = 0,
+            Text = "  " .. tabName, Font = Enum.Font.Gotham, TextSize = 13,
+            TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Color3.fromRGB(220, 220, 230),
+            AutoButtonColor = false,
+        }, { new("UICorner", { CornerRadius = UDim.new(0, 6) }) })
+
+        local container = new("ScrollingFrame", {
+            Parent = content, Size = UDim2.new(1, 0, 0, 0),
+            AutomaticCanvasSize = Enum.AutomaticSize.Y,
+            CanvasSize = UDim2.new(0, 0, 0, 0),
+            BackgroundTransparency = 1, BorderSizePixel = 0,
+            ScrollBarThickness = 3, Visible = false,
+        })
+        new("UIListLayout", { Parent = container, Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder })
+
+        local tab = { Name = tabName, Button = btn, Container = container }
+        tabs[tabName] = tab
+        btn.MouseButton1Click:Connect(function() selectTab(tab) end)
+        if not activeTab then selectTab(tab) end
+
+        function tab:AddSection(s)
+            s = s or {}
+            local f = new("Frame", { Parent = container, Size = UDim2.new(1, 0, 0, 26), BackgroundTransparency = 1 })
+            new("TextLabel", {
+                Parent = f, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 1, 0),
+                Font = Enum.Font.GothamBold, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left,
+                TextColor3 = Color3.fromRGB(150, 150, 165), Text = (s.Name or "Section"):upper(),
+            })
+            return f
+        end
+
+        function tab:AddButton(s)
+            s = s or {}
+            local b = new("TextButton", {
+                Parent = container, Size = UDim2.new(1, 0, 0, 32),
+                BackgroundColor3 = Color3.fromRGB(35, 35, 42), BorderSizePixel = 0,
+                Font = Enum.Font.Gotham, TextSize = 13,
+                TextColor3 = Color3.fromRGB(230, 230, 235),
+                Text = s.Name or "Button", AutoButtonColor = false,
+            }, { new("UICorner", { CornerRadius = UDim.new(0, 6) }) })
+            b.MouseButton1Click:Connect(function() if s.Callback then pcall(s.Callback) end end)
+            return b
+        end
+
+        function tab:AddToggle(s)
+            s = s or {}
+            local state = s.Default and true or false
+            local frame = new("Frame", {
+                Parent = container, Size = UDim2.new(1, 0, 0, 34),
+                BackgroundColor3 = Color3.fromRGB(35, 35, 42), BorderSizePixel = 0,
+            }, { new("UICorner", { CornerRadius = UDim.new(0, 6) }) })
+            new("TextLabel", {
+                Parent = frame, BackgroundTransparency = 1,
+                Position = UDim2.new(0, 10, 0, 0), Size = UDim2.new(1, -60, 1, 0),
+                Font = Enum.Font.Gotham, TextSize = 13,
+                TextColor3 = Color3.fromRGB(230, 230, 235),
+                TextXAlignment = Enum.TextXAlignment.Left, Text = s.Name or "Toggle",
+            })
+            local knobBg = new("Frame", {
+                Parent = frame, Size = UDim2.new(0, 36, 0, 18),
+                Position = UDim2.new(1, -46, 0.5, -9),
+                BackgroundColor3 = Color3.fromRGB(60, 60, 70), BorderSizePixel = 0,
+            }, { new("UICorner", { CornerRadius = UDim.new(1, 0) }) })
+            local knob = new("Frame", {
+                Parent = knobBg, Size = UDim2.new(0, 14, 0, 14),
+                Position = UDim2.new(0, 2, 0.5, -7),
+                BackgroundColor3 = Color3.fromRGB(240, 240, 245), BorderSizePixel = 0,
+            }, { new("UICorner", { CornerRadius = UDim.new(1, 0) }) })
+            local function apply(v, fire)
+                state = v
+                TweenService:Create(knobBg, TweenInfo.new(0.15), {
+                    BackgroundColor3 = v and Color3.fromRGB(80, 140, 255) or Color3.fromRGB(60, 60, 70)
+                }):Play()
+                TweenService:Create(knob, TweenInfo.new(0.15), {
+                    Position = v and UDim2.new(1, -16, 0.5, -7) or UDim2.new(0, 2, 0.5, -7)
+                }):Play()
+                if fire and s.Callback then pcall(s.Callback, v) end
+            end
+            if state then apply(true, false) end
+            local click = new("TextButton", {
+                Parent = frame, Size = UDim2.new(1, 0, 1, 0),
+                BackgroundTransparency = 1, Text = "",
+            })
+            click.MouseButton1Click:Connect(function() apply(not state, true) end)
+            return { Set = function(v) apply(v, true) end, Get = function() return state end }
+        end
+
+        function tab:AddSlider(s)
+            s = s or {}
+            local min, max = s.Min or 0, s.Max or 100
+            local val = math.clamp(s.Default or min, min, max)
+            local step = s.Step or 1
+            local frame = new("Frame", {
+                Parent = container, Size = UDim2.new(1, 0, 0, 50),
+                BackgroundColor3 = Color3.fromRGB(35, 35, 42), BorderSizePixel = 0,
+            }, { new("UICorner", { CornerRadius = UDim.new(0, 6) }) })
+            new("TextLabel", {
+                Parent = frame, BackgroundTransparency = 1,
+                Position = UDim2.new(0, 10, 0, 4), Size = UDim2.new(1, -20, 0, 18),
+                Font = Enum.Font.Gotham, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left,
+                TextColor3 = Color3.fromRGB(230, 230, 235), Text = s.Name or "Slider",
+            })
+            local valLbl = new("TextLabel", {
+                Parent = frame, BackgroundTransparency = 1,
+                Position = UDim2.new(0, 10, 0, 4), Size = UDim2.new(1, -20, 0, 18),
+                Font = Enum.Font.Gotham, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Right,
+                TextColor3 = Color3.fromRGB(150, 200, 255), Text = tostring(val),
+            })
+            local bar = new("Frame", {
+                Parent = frame, Size = UDim2.new(1, -20, 0, 6),
+                Position = UDim2.new(0, 10, 0, 32),
+                BackgroundColor3 = Color3.fromRGB(60, 60, 70), BorderSizePixel = 0,
+            }, { new("UICorner", { CornerRadius = UDim.new(1, 0) }) })
+            local fill = new("Frame", {
+                Parent = bar, Size = UDim2.new((val - min) / (max - min), 0, 1, 0),
+                BackgroundColor3 = Color3.fromRGB(80, 140, 255), BorderSizePixel = 0,
+            }, { new("UICorner", { CornerRadius = UDim.new(1, 0) }) })
+            local hit = new("TextButton", {
+                Parent = bar, Size = UDim2.new(1, 0, 2, 0), Position = UDim2.new(0, 0, -0.5, 0),
+                BackgroundTransparency = 1, Text = "",
+            })
+            local function setValue(v, fire)
+                v = math.clamp(v, min, max)
+                if step > 0 then v = math.floor(v / step + 0.5) * step end
+                val = v
+                fill.Size = UDim2.new((val - min) / (max - min), 0, 1, 0)
+                valLbl.Text = tostring(val)
+                if fire and s.Callback then pcall(s.Callback, val) end
+            end
+            local dragging = false
+            local function onInput(input)
+                local rel = (input.Position.X - bar.AbsolutePosition.X) / bar.AbsoluteSize.X
+                setValue(min + (max - min) * rel, true)
+            end
+            hit.InputBegan:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1
+                or input.UserInputType == Enum.UserInputType.Touch then
+                    dragging = true; onInput(input)
+                end
+            end)
+            UserInputService.InputChanged:Connect(function(input)
+                if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement
+                or input.UserInputType == Enum.UserInputType.Touch) then onInput(input) end
+            end)
+            UserInputService.InputEnded:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1
+                or input.UserInputType == Enum.UserInputType.Touch then dragging = false end
+            end)
+            return { Set = function(v) setValue(v, true) end, Get = function() return val end }
+        end
+
+        function tab:AddTextbox(s)
+            s = s or {}
+            local frame = new("Frame", {
+                Parent = container, Size = UDim2.new(1, 0, 0, 34),
+                BackgroundColor3 = Color3.fromRGB(35, 35, 42), BorderSizePixel = 0,
+            }, { new("UICorner", { CornerRadius = UDim.new(0, 6) }) })
+            new("TextLabel", {
+                Parent = frame, BackgroundTransparency = 1,
+                Position = UDim2.new(0, 10, 0, 0), Size = UDim2.new(0, 100, 1, 0),
+                Font = Enum.Font.Gotham, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left,
+                TextColor3 = Color3.fromRGB(230, 230, 235), Text = s.Name or "Input",
+            })
+            local box = new("TextBox", {
+                Parent = frame, BackgroundColor3 = Color3.fromRGB(25, 25, 30),
+                BorderSizePixel = 0, ClearTextOnFocus = false,
+                Position = UDim2.new(1, -180, 0.5, -12), Size = UDim2.new(0, 170, 0, 24),
+                Font = Enum.Font.Gotham, TextSize = 13, TextColor3 = Color3.fromRGB(230, 230, 235),
+                PlaceholderText = s.Placeholder or "", PlaceholderColor3 = Color3.fromRGB(120, 120, 130),
+                Text = s.Default or "",
+            }, { new("UICorner", { CornerRadius = UDim.new(0, 4) }) })
+            box.FocusLost:Connect(function(enter)
+                if enter and s.Callback then pcall(s.Callback, box.Text) end
+            end)
+            return { Set = function(v) box.Text = v end, Get = function() return box.Text end }
+        end
+
+        return tab
+    end
+
+    function Window:SelectTab(n) if tabs[n] then selectTab(tabs[n]) end end
+    function Window:Destroy() gui:Destroy() end
+    return Window
+end
+
+-- ======================================================
+-- SCRIPT MUSCLE LEGENDS
+-- ======================================================
+local Window = Nova:MakeWindow({ Name = "Muscle Legends — Multi" })
+
+Window:MakeTab({ Name = "Farm" })
+Window:MakeTab({ Name = "Farm Rápido" })
+Window:MakeTab({ Name = "Rebirth" })
+Window:MakeTab({ Name = "Misc" })
+Window:MakeTab({ Name = "Calculadora" })
+
+-- ---------- FARM ----------
+local FarmTab = Window.Tabs["Farm"]
+FarmTab:AddSection({ Name = "Entrenamiento" })
+local autoFarm = false
+FarmTab:AddToggle({
+    Name = "Auto golpear (farmeo continuo)",
+    Default = false,
+    Callback = function(v)
+        autoFarm = v
+        task.spawn(function()
+            while autoFarm do
+                pcall(function()
+                    local ev = LP:FindFirstChild("MuscleEvent") or ReplicatedStorage:FindFirstChild("MuscleEvent")
+                    if ev then
+                        ev:FireServer("punch", "leftHand")
+                        ev:FireServer("punch", "rightHand")
+                    end
+                end)
+                task.wait(0.15)
+            end
+        end)
+    end,
+})
+
+-- ---------- FARM RÁPIDO ----------
+local FastTab = Window.Tabs["Farm Rápido"]
+FastTab:AddSection({ Name = "Configuración de repeticiones" })
+local repeticiones = 100
+local farmRapidoActivo = false
+local repsHechas = 0
+
+FastTab:AddSlider({
+    Name = "Cantidad de repeticiones",
+    Min = 10, Max = 5000, Default = 100, Step = 10,
+    Callback = function(v) repeticiones = v end,
+})
+
+FastTab:AddToggle({
+    Name = "Farmeo rápido (golpear)",
+    Default = false,
+    Callback = function(v)
+        farmRapidoActivo = v
+        if v then
+            repsHechas = 0
+            Nova:Notify({ Title = "Farm Rápido", Text = "Iniciando " .. repeticiones .. " repeticiones...", Duration = 3 })
+            task.spawn(function()
+                local ev = LP:FindFirstChild("MuscleEvent") or ReplicatedStorage:FindFirstChild("MuscleEvent")
+                while farmRapidoActivo and repsHechas < repeticiones do
+                    pcall(function()
+                        if ev then
+                            ev:FireServer("punch", "leftHand")
+                            ev:FireServer("punch", "rightHand")
+                        end
+                    end)
+                    repsHechas = repsHechas + 1
+                    task.wait(0.05)
+                end
+                farmRapidoActivo = false
+                Nova:Notify({ Title = "Farm Rápido", Text = "Completadas " .. repsHechas, Duration = 4 })
+            end)
+        end
+    end,
+})
+
+FastTab:AddButton({
+    Name = "Iniciar con repeticiones configuradas",
+    Callback = function()
+        farmRapidoActivo = true
+        repsHechas = 0
+        Nova:Notify({ Title = "Farm Rápido", Text = "Iniciando " .. repeticiones .. "...", Duration = 3 })
+        task.spawn(function()
+            local ev = LP:FindFirstChild("MuscleEvent") or ReplicatedStorage:FindFirstChild("MuscleEvent")
+            while farmRapidoActivo and repsHechas < repeticiones do
+                pcall(function()
+                    if ev then
+                        ev:FireServer("punch", "leftHand")
+                        ev:FireServer("punch", "rightHand")
+                    end
+                end)
+                repsHechas = repsHechas + 1
+                task.wait(0.05)
+            end
+            farmRapidoActivo = false
+            Nova:Notify({ Title = "Farm Rápido", Text = "Completadas " .. repsHechas, Duration = 4 })
+        end)
+    end,
+})
+
+FastTab:AddButton({
+    Name = "Detener farmeo rápido",
+    Callback = function()
+        farmRapidoActivo = false
+        Nova:Notify({ Title = "Farm Rápido", Text = "Detenido en " .. repsHechas, Duration = 3 })
+    end,
+})
+
+-- ---------- REBIRTH ----------
+local RbTab = Window.Tabs["Rebirth"]
+RbTab:AddSection({ Name = "Rebirth" })
+local autoRebirth = false
+RbTab:AddToggle({
+    Name = "Auto Rebirth",
+    Default = false,
+    Callback = function(v)
+        autoRebirth = v
+        task.spawn(function()
+            while autoRebirth do
+                pcall(function()
+                    local re = ReplicatedStorage:FindFirstChild("rEvents")
+                    if re and re:FindFirstChild("rebirthRemote") then
+                        re.rebirthRemote:InvokeServer("rebirthRequest")
+                    end
+                end)
+                task.wait(5)
+            end
+        end)
+    end,
+})
+
+RbTab:AddSlider({
+    Name = "Intervalo auto rebirth (s)",
+    Min = 1, Max = 30, Default = 5, Step = 1,
+    Callback = function(v) _G.RebirthDelay = v end,
+})
+
+-- ---------- MISC (Anti-AFK) ----------
+local MiscTab = Window.Tabs["Misc"]
+MiscTab:AddSection({ Name = "Anti-AFK" })
+
+local antiAfkActivo = false
+local antiAfkThread = nil
+
+local function iniciarAntiAfk()
+    if antiAfkActivo then return end
+    antiAfkActivo = true
+    antiAfkThread = task.spawn(function()
+        while antiAfkActivo do
+            task.wait(55)
+            if not antiAfkActivo then break end
+            pcall(function()
+                if VirtualUser then
+                    VirtualUser:CaptureController()
+                    VirtualUser:ClickButton2(Vector2.new(0, 0))
+                end
+            end)
+        end
+    end)
+end
+
+local function detenerAntiAfk()
+    antiAfkActivo = false
+    if antiAfkThread then task.cancel(antiAfkThread); antiAfkThread = nil end
+end
+
+MiscTab:AddToggle({
+    Name = "Anti-AFK Proactivo",
+    Default = true,
+    Callback = function(v)
+        if v then iniciarAntiAfk(); Nova:Notify({ Title = "Anti-AFK", Text = "Activado", Duration = 3 })
+        else detenerAntiAfk(); Nova:Notify({ Title = "Anti-AFK", Text = "Desactivado", Duration = 3 }) end
+    end,
+})
+
+task.spawn(function() task.wait(1); iniciarAntiAfk() end)
+
+MiscTab:AddSection({ Name = "Utilidades" })
+MiscTab:AddButton({
+    Name = "Mostrar estadísticas",
+    Callback = function()
+        local stats = LP:FindFirstChild("Stats") or LP:FindFirstChild("leaderstats")
+        if stats then
+            local txt = {}
+            for _, c in ipairs(stats:GetChildren()) do
+                table.insert(txt, c.Name .. ": " .. tostring(c.Value))
+            end
+            Nova:Notify({ Title = "Stats", Text = table.concat(txt, "\n"), Duration = 6 })
+        else
+            Nova:Notify({ Title = "Stats", Text = "No se encontraron estadísticas." })
+        end
+    end,
+})
+
+MiscTab:AddTextbox({
+    Name = "FPS objetivo",
+    Placeholder = "60",
+    Callback = function(v) pcall(function() setfpscap(tonumber(v) or 60) end) end,
+})
+
+-- ---------- CALCULADORA ----------
+local CalcTab = Window.Tabs["Calculadora"]
 CalcTab:AddSection({ Name = "Tasa de ganancia en tiempo real" })
 
--- Estado
-local calcActivo        = false
-local ultimoStrength    = 0
-local ultimoDurability  = 0
-local ultimoTiempo      = tick()
-local tasaStrPorSeg     = 0
-local tasaDurPorSeg     = 0
-local muestrasStr       = {}
-local muestrasDur       = {}
-local MAX_MUESTRAS      = 10
+local calcActivo, ultimoStrength, ultimoDurability, ultimoTiempo = false, 0, 0, tick()
+local tasaStrPorSeg, tasaDurPorSeg = 0, 0
+local muestrasStr, muestrasDur = {}, {}
+local MAX_MUESTRAS = 10
 
--- Etiquetas
-local lblStrRate, lblDurRate
-local lblStrHour, lblDurHour
-local lblStrDay,  lblDurDay
-local lblStrWeek, lblDurWeek
+local lblStrRate, lblDurRate, lblStrHour, lblDurHour
+local lblStrDay, lblDurDay, lblStrWeek, lblDurWeek
 
--- Obtener stats actuales
 local function obtenerStats()
     local stats = LP:FindFirstChild("Stats") or LP:FindFirstChild("leaderstats")
     if not stats then return nil, nil end
@@ -30,7 +598,6 @@ local function obtenerStats()
     return str and str.Value or nil, dur and dur.Value or nil
 end
 
--- Formatear números grandes
 local function formatear(n)
     if not n or n == 0 then return "0" end
     local abs = math.abs(n)
@@ -40,7 +607,6 @@ local function formatear(n)
     return string.format("%.1f", n)
 end
 
--- Bucle de muestreo
 local function iniciarCalculadora()
     if calcActivo then return end
     calcActivo = true
@@ -48,45 +614,35 @@ local function iniciarCalculadora()
     ultimoStrength   = s0 or 0
     ultimoDurability = d0 or 0
     ultimoTiempo     = tick()
-    muestrasStr = {}
-    muestrasDur = {}
-
+    muestrasStr, muestrasDur = {}, {}
     task.spawn(function()
         while calcActivo do
             task.wait(1)
             if not calcActivo then break end
-
             local s, d = obtenerStats()
             if s and d then
                 local ahora = tick()
                 local dt = ahora - ultimoTiempo
                 if dt > 0 then
-                    local ds = s - ultimoStrength
-                    local dd = d - ultimoDurability
-
-                    ultimoStrength   = s
-                    ultimoDurability = d
-                    ultimoTiempo     = ahora
-
+                    local ds, dd = s - ultimoStrength, d - ultimoDurability
+                    ultimoStrength, ultimoDurability, ultimoTiempo = s, d, ahora
                     table.insert(muestrasStr, ds / dt)
                     table.insert(muestrasDur, dd / dt)
                     if #muestrasStr > MAX_MUESTRAS then table.remove(muestrasStr, 1) end
                     if #muestrasDur > MAX_MUESTRAS then table.remove(muestrasDur, 1) end
-
                     local sumS, sumD = 0, 0
                     for _, v in ipairs(muestrasStr) do sumS = sumS + v end
                     for _, v in ipairs(muestrasDur) do sumD = sumD + v end
                     tasaStrPorSeg = sumS / #muestrasStr
                     tasaDurPorSeg = sumD / #muestrasDur
-
                     if lblStrRate then
-                        lblStrRate.Text = "Strength/seg: "     .. formatear(tasaStrPorSeg)
-                        lblDurRate.Text = "Durability/seg: "   .. formatear(tasaDurPorSeg)
-                        lblStrHour.Text = "Strength/hora: "    .. formatear(tasaStrPorSeg * 3600)
-                        lblDurHour.Text = "Durability/hora: "  .. formatear(tasaDurPorSeg * 3600)
-                        lblStrDay.Text  = "Strength/día: "     .. formatear(tasaStrPorSeg * 86400)
-                        lblDurDay.Text  = "Durability/día: "   .. formatear(tasaDurPorSeg * 86400)
-                        lblStrWeek.Text = "Strength/semana: "  .. formatear(tasaStrPorSeg * 604800)
+                        lblStrRate.Text = "Strength/seg: "    .. formatear(tasaStrPorSeg)
+                        lblDurRate.Text = "Durability/seg: "  .. formatear(tasaDurPorSeg)
+                        lblStrHour.Text = "Strength/hora: "   .. formatear(tasaStrPorSeg * 3600)
+                        lblDurHour.Text = "Durability/hora: " .. formatear(tasaDurPorSeg * 3600)
+                        lblStrDay.Text  = "Strength/día: "    .. formatear(tasaStrPorSeg * 86400)
+                        lblDurDay.Text  = "Durability/día: "  .. formatear(tasaDurPorSeg * 86400)
+                        lblStrWeek.Text = "Strength/semana: " .. formatear(tasaStrPorSeg * 604800)
                         lblDurWeek.Text = "Durability/semana: ".. formatear(tasaDurPorSeg * 604800)
                     end
                 end
@@ -95,81 +651,19 @@ local function iniciarCalculadora()
     end)
 end
 
-local function detenerCalculadora()
-    calcActivo = false
-end
-
--- Toggle para iniciar/detener
 CalcTab:AddToggle({
     Name = "Activar calculadora",
     Default = false,
     Callback = function(v)
-        if v then
-            iniciarCalculadora()
-            Nova:Notify({ Title = "Calculadora", Text = "Muestreando...", Duration = 3 })
-        else
-            detenerCalculadora()
-            Nova:Notify({ Title = "Calculadora", Text = "Detenida", Duration = 3 })
-        end
+        if v then iniciarCalculadora(); Nova:Notify({ Title = "Calculadora", Text = "Muestreando...", Duration = 3 })
+        else calcActivo = false; Nova:Notify({ Title = "Calculadora", Text = "Detenida", Duration = 3 }) end
     end,
 })
 
--- Panel de resultados
 CalcTab:AddSection({ Name = "Resultados" })
 
 local resultsFrame = Instance.new("Frame")
 resultsFrame.Parent = CalcTab.Container
 resultsFrame.Size = UDim2.new(1, 0, 0, 200)
 resultsFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
-resultsFrame.BorderSizePixel = 0
-Instance.new("UICorner", resultsFrame).CornerRadius = UDim.new(0, 6)
-
-local listLayout = Instance.new("UIListLayout")
-listLayout.Parent = resultsFrame
-listLayout.Padding = UDim.new(0, 4)
-listLayout.SortOrder = Enum.SortOrder.LayoutOrder
-
-local padding = Instance.new("UIPadding")
-padding.Parent = resultsFrame
-padding.PaddingLeft = UDim.new(0, 10)
-padding.PaddingTop = UDim.new(0, 8)
-
-local function crearFila(texto, color)
-    local f = Instance.new("Frame")
-    f.Parent = resultsFrame
-    f.Size = UDim2.new(1, 0, 0, 22)
-    f.BackgroundTransparency = 1
-    local lbl = Instance.new("TextLabel")
-    lbl.Parent = f
-    lbl.Size = UDim2.new(1, 0, 1, 0)
-    lbl.BackgroundTransparency = 1
-    lbl.Font = Enum.Font.Gotham
-    lbl.TextSize = 12
-    lbl.TextXAlignment = Enum.TextXAlignment.Left
-    lbl.TextColor3 = color or Color3.fromRGB(200, 200, 210)
-    lbl.Text = texto
-    return lbl
-end
-
-lblStrRate = crearFila("Strength/seg: 0",     Color3.fromRGB(150, 200, 255))
-lblDurRate = crearFila("Durability/seg: 0",   Color3.fromRGB(150, 255, 200))
-lblStrHour = crearFila("Strength/hora: 0")
-lblDurHour = crearFila("Durability/hora: 0")
-lblStrDay  = crearFila("Strength/día: 0")
-lblDurDay  = crearFila("Durability/día: 0")
-lblStrWeek = crearFila("Strength/semana: 0")
-lblDurWeek = crearFila("Durability/semana: 0")
-
--- Botón de reinicio
-CalcTab:AddButton({
-    Name = "Reiniciar muestreo",
-    Callback = function()
-        muestrasStr = {}
-        muestrasDur = {}
-        local s, d = obtenerStats()
-        ultimoStrength   = s or 0
-        ultimoDurability = d or 0
-        ultimoTiempo     = tick()
-        Nova:Notify({ Title = "Calculadora", Text = "Muestras reiniciadas", Duration = 2 })
-    end,
-})
+resultsFrame.BorderSize
