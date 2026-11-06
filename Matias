@@ -1,205 +1,175 @@
 -- ======================================================
--- MXTIAS HUB 777 - Muscle Legends (Optimizado para Xeno)
+-- TAB CALCULADORA — Strength y Durability
 -- ======================================================
+local CalcTab = Window:MakeTab({ Name = "Calculadora" })
+CalcTab:AddSection({ Name = "Tasa de ganancia en tiempo real" })
 
-local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/shlexware/Orion/main/source')))()
-local Window = OrionLib:MakeWindow({
-    Name = "mxtias hub 777 | Muscle Legends",
-    HidePremium = false,
-    SaveConfig = true,
-    ConfigFolder = "mxtias_hub_777"
-})
+-- Estado
+local calcActivo        = false
+local ultimoStrength    = 0
+local ultimoDurability  = 0
+local ultimoTiempo      = tick()
+local tasaStrPorSeg     = 0
+local tasaDurPorSeg     = 0
+local muestrasStr       = {}
+local muestrasDur       = {}
+local MAX_MUESTRAS      = 10
 
--- Variables de Estado
-local FastRepEnabled = false
-local RepsAmount = 1
-local AutoRebirth = false
-local AutoPunch = false
+-- Etiquetas
+local lblStrRate, lblDurRate
+local lblStrHour, lblDurHour
+local lblStrDay,  lblDurDay
+local lblStrWeek, lblDurWeek
 
--- ======================================================
--- PESTAÑA: FAST REP
--- ======================================================
-local FastRepTab = Window:MakeTab({
-    Name = "Fast Rep",
-    Icon = "rbxassetid://4483345998",
-    PremiumOnly = false
-})
+-- Obtener stats actuales
+local function obtenerStats()
+    local stats = LP:FindFirstChild("Stats") or LP:FindFirstChild("leaderstats")
+    if not stats then return nil, nil end
+    local str = stats:FindFirstChild("Strength") or stats:FindFirstChild("Strenght")
+    local dur = stats:FindFirstChild("Durability")
+    return str and str.Value or nil, dur and dur.Value or nil
+end
 
-FastRepTab:AddSection({
-    Name = "Configuración de Repeticiones Rápidas"
-})
+-- Formatear números grandes
+local function formatear(n)
+    if not n or n == 0 then return "0" end
+    local abs = math.abs(n)
+    if abs >= 1e9 then return string.format("%.2fB", n / 1e9) end
+    if abs >= 1e6 then return string.format("%.2fM", n / 1e6) end
+    if abs >= 1e3 then return string.format("%.2fK", n / 1e3) end
+    return string.format("%.1f", n)
+end
 
-FastRepTab:AddToggle({
-    Name = "Activar Fast Rep",
-    Default = false,
-    Callback = function(Value)
-        FastRepEnabled = Value
-        task.spawn(function()
-            while FastRepEnabled do
-                task.wait()
-                pcall(function()
-                    local muscleEvent = game:GetService("Players").LocalPlayer:FindFirstChild("muscleEvent")
-                    if muscleEvent then
-                        for i = 1, RepsAmount do
-                            muscleEvent:FireServer("rep")
-                        end
+-- Bucle de muestreo
+local function iniciarCalculadora()
+    if calcActivo then return end
+    calcActivo = true
+    local s0, d0 = obtenerStats()
+    ultimoStrength   = s0 or 0
+    ultimoDurability = d0 or 0
+    ultimoTiempo     = tick()
+    muestrasStr = {}
+    muestrasDur = {}
+
+    task.spawn(function()
+        while calcActivo do
+            task.wait(1)
+            if not calcActivo then break end
+
+            local s, d = obtenerStats()
+            if s and d then
+                local ahora = tick()
+                local dt = ahora - ultimoTiempo
+                if dt > 0 then
+                    local ds = s - ultimoStrength
+                    local dd = d - ultimoDurability
+
+                    ultimoStrength   = s
+                    ultimoDurability = d
+                    ultimoTiempo     = ahora
+
+                    table.insert(muestrasStr, ds / dt)
+                    table.insert(muestrasDur, dd / dt)
+                    if #muestrasStr > MAX_MUESTRAS then table.remove(muestrasStr, 1) end
+                    if #muestrasDur > MAX_MUESTRAS then table.remove(muestrasDur, 1) end
+
+                    local sumS, sumD = 0, 0
+                    for _, v in ipairs(muestrasStr) do sumS = sumS + v end
+                    for _, v in ipairs(muestrasDur) do sumD = sumD + v end
+                    tasaStrPorSeg = sumS / #muestrasStr
+                    tasaDurPorSeg = sumD / #muestrasDur
+
+                    if lblStrRate then
+                        lblStrRate.Text = "Strength/seg: "     .. formatear(tasaStrPorSeg)
+                        lblDurRate.Text = "Durability/seg: "   .. formatear(tasaDurPorSeg)
+                        lblStrHour.Text = "Strength/hora: "    .. formatear(tasaStrPorSeg * 3600)
+                        lblDurHour.Text = "Durability/hora: "  .. formatear(tasaDurPorSeg * 3600)
+                        lblStrDay.Text  = "Strength/día: "     .. formatear(tasaStrPorSeg * 86400)
+                        lblDurDay.Text  = "Durability/día: "   .. formatear(tasaDurPorSeg * 86400)
+                        lblStrWeek.Text = "Strength/semana: "  .. formatear(tasaStrPorSeg * 604800)
+                        lblDurWeek.Text = "Durability/semana: ".. formatear(tasaDurPorSeg * 604800)
                     end
-                end)
+                end
             end
-        end)
-    end    
-})
+        end
+    end)
+end
 
-FastRepTab:AddSlider({
-    Name = "Cantidad de Reps por ciclo",
-    Min = 1,
-    Max = 50,
-    Default = 1,
-    Color = Color3.fromRGB(0, 255, 128),
-    Increment = 1,
-    ValueName = "Reps",
-    Callback = function(Value)
-        RepsAmount = Value
-    end    
-})
+local function detenerCalculadora()
+    calcActivo = false
+end
 
--- ======================================================
--- PESTAÑA: AUTO REBIRTH / PUNCH
--- ======================================================
-local AutoTab = Window:MakeTab({
-    Name = "Auto Rebirths",
-    Icon = "rbxassetid://4483345998",
-    PremiumOnly = false
-})
-
-AutoTab:AddSection({
-    Name = "Automatización"
-})
-
-AutoTab:AddToggle({
-    Name = "Auto Puñetazo",
+-- Toggle para iniciar/detener
+CalcTab:AddToggle({
+    Name = "Activar calculadora",
     Default = false,
-    Callback = function(Value)
-        AutoPunch = Value
-        task.spawn(function()
-            while AutoPunch do
-                task.wait(0.1)
-                pcall(function()
-                    local player = game:GetService("Players").LocalPlayer
-                    local punch = player.Backpack:FindFirstChild("Punch") or player.Character:FindFirstChild("Punch")
-                    if punch then
-                        punch.Parent = player.Character
-                        punch:Activate()
-                    end
-                end)
-            end
-        end)
-    end    
+    Callback = function(v)
+        if v then
+            iniciarCalculadora()
+            Nova:Notify({ Title = "Calculadora", Text = "Muestreando...", Duration = 3 })
+        else
+            detenerCalculadora()
+            Nova:Notify({ Title = "Calculadora", Text = "Detenida", Duration = 3 })
+        end
+    end,
 })
 
-AutoTab:AddToggle({
-    Name = "Auto Rebirth",
-    Default = false,
-    Callback = function(Value)
-        AutoRebirth = Value
-        task.spawn(function()
-            while AutoRebirth do
-                task.wait(1)
-                pcall(function()
-                    game:GetService("ReplicatedStorage").rEvents.rebirthRemote:InvokeServer("rebirthRequest")
-                end)
-            end
-        end)
-    end    
+-- Panel de resultados
+CalcTab:AddSection({ Name = "Resultados" })
+
+local resultsFrame = Instance.new("Frame")
+resultsFrame.Parent = CalcTab.Container
+resultsFrame.Size = UDim2.new(1, 0, 0, 200)
+resultsFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
+resultsFrame.BorderSizePixel = 0
+Instance.new("UICorner", resultsFrame).CornerRadius = UDim.new(0, 6)
+
+local listLayout = Instance.new("UIListLayout")
+listLayout.Parent = resultsFrame
+listLayout.Padding = UDim.new(0, 4)
+listLayout.SortOrder = Enum.SortOrder.LayoutOrder
+
+local padding = Instance.new("UIPadding")
+padding.Parent = resultsFrame
+padding.PaddingLeft = UDim.new(0, 10)
+padding.PaddingTop = UDim.new(0, 8)
+
+local function crearFila(texto, color)
+    local f = Instance.new("Frame")
+    f.Parent = resultsFrame
+    f.Size = UDim2.new(1, 0, 0, 22)
+    f.BackgroundTransparency = 1
+    local lbl = Instance.new("TextLabel")
+    lbl.Parent = f
+    lbl.Size = UDim2.new(1, 0, 1, 0)
+    lbl.BackgroundTransparency = 1
+    lbl.Font = Enum.Font.Gotham
+    lbl.TextSize = 12
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.TextColor3 = color or Color3.fromRGB(200, 200, 210)
+    lbl.Text = texto
+    return lbl
+end
+
+lblStrRate = crearFila("Strength/seg: 0",     Color3.fromRGB(150, 200, 255))
+lblDurRate = crearFila("Durability/seg: 0",   Color3.fromRGB(150, 255, 200))
+lblStrHour = crearFila("Strength/hora: 0")
+lblDurHour = crearFila("Durability/hora: 0")
+lblStrDay  = crearFila("Strength/día: 0")
+lblDurDay  = crearFila("Durability/día: 0")
+lblStrWeek = crearFila("Strength/semana: 0")
+lblDurWeek = crearFila("Durability/semana: 0")
+
+-- Botón de reinicio
+CalcTab:AddButton({
+    Name = "Reiniciar muestreo",
+    Callback = function()
+        muestrasStr = {}
+        muestrasDur = {}
+        local s, d = obtenerStats()
+        ultimoStrength   = s or 0
+        ultimoDurability = d or 0
+        ultimoTiempo     = tick()
+        Nova:Notify({ Title = "Calculadora", Text = "Muestras reiniciadas", Duration = 2 })
+    end,
 })
-
--- ======================================================
--- PESTAÑA: CALCULADORA DE ESTADÍSTICAS
--- ======================================================
-local StatsTab = Window:MakeTab({
-    Name = "Calculadora Stats",
-    Icon = "rbxassetid://4483345998",
-    PremiumOnly = false
-})
-
-StatsTab:AddSection({
-    Name = "Proyección de Fuerza"
-})
-
-local ForcePerHourLabel = StatsTab:AddLabel("Fuerza por Hora: Calculando...")
-local ForcePerDayLabel = StatsTab:AddLabel("Fuerza por Día: Calculando...")
-local ForcePerWeekLabel = StatsTab:AddLabel("Fuerza por Semana: Calculando...")
-
-StatsTab:AddSection({
-    Name = "Proyección de Durabilidad"
-})
-
-local DurabilityPerHourLabel = StatsTab:AddLabel("Durabilidad por Hora: Calculando...")
-local DurabilityPerDayLabel = StatsTab:AddLabel("Durabilidad por Día: Calculando...")
-local DurabilityPerWeekLabel = StatsTab:AddLabel("Durabilidad por Semana: Calculando...")
-
-task.spawn(function()
-    local player = game:GetService("Players").LocalPlayer
-    local leaderstats = player:WaitForChild("leaderstats")
-    
-    local initialStrength = leaderstats:WaitForChild("Strength").Value
-    local initialDurability = leaderstats:WaitForChild("Durability").Value
-    local startTime = tick()
-
-    while task.wait(3) do
-        pcall(function()
-            local currentTime = tick()
-            local timeElapsed = currentTime - startTime
-            
-            if timeElapsed > 0 then
-                local currentStrength = leaderstats.Strength.Value
-                local currentDurability = leaderstats.Durability.Value
-                
-                local strengthGained = currentStrength - initialStrength
-                local durabilityGained = currentDurability - initialDurability
-                
-                local strengthPerSec = strengthGained / timeElapsed
-                local strHour = math.floor(strengthPerSec * 3600)
-                local strDay = math.floor(strengthPerSec * 86400)
-                local strWeek = math.floor(strengthPerSec * 604800)
-                
-                local durabilityPerSec = durabilityGained / timeElapsed
-                local durHour = math.floor(durabilityPerSec * 3600)
-                local durDay = math.floor(durabilityPerSec * 86400)
-                local durWeek = math.floor(durabilityPerSec * 604800)
-                
-                ForcePerHourLabel:Set("Fuerza por Hora: " .. tostring(strHour))
-                ForcePerDayLabel:Set("Fuerza por Día: " .. tostring(strDay))
-                ForcePerWeekLabel:Set("Fuerza por Semana: " .. tostring(strWeek))
-                
-                DurabilityPerHourLabel:Set("Durabilidad por Hora: " .. tostring(durHour))
-                DurabilityPerDayLabel:Set("Durabilidad por Día: " .. tostring(durDay))
-                DurabilityPerWeekLabel:Set("Durabilidad por Semana: " .. tostring(durWeek))
-            end
-        end)
-    end
-end)
-
--- ======================================================
--- PESTAÑA: AJUSTES
--- ======================================================
-let MiscTab = Window:MakeTab({
-    Name = "Ajustes",
-    Icon = "rbxassetid://4483345998",
-    PremiumOnly = false
-})
-
-MiscTab:AddSlider({
-    Name = "Velocidad de Movimiento",
-    Min = 16,
-    Max = 500,
-    Default = 16,
-    Color = Color3.fromRGB(255, 0, 0),
-    Increment = 1,
-    ValueName = "Speed",
-    Callback = function(Value)
-        game:GetService("Players").LocalPlayer.Character.Humanoid.WalkSpeed = Value
-    end    
-})
-
-OrionLib:Init()
