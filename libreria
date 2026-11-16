@@ -1,1 +1,317 @@
+--[[
+    Muscle Legends UI Library & Core
+    Autor: TuNombre
+    Uso: Aloja este script en GitHub (Raw) y cárgalo con loadstring.
+]]
 
+local MuscleLib = {}
+MuscleLib.__index = MuscleLib
+
+-- Servicios de Roblox
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local VirtualUser = game:GetService("VirtualUser")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local LocalPlayer = Players.LocalPlayer
+local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+
+-- Variables de estado global
+local Flags = {
+    AutoStrength = false,
+    AutoDurability = false,
+    AutoAgility = false,
+    AutoRebirth = false,
+    AntiAFK = true,
+    WalkSpeed = 16,
+    JumpPower = 50
+}
+
+-- Función Anti-AFK integrada
+LocalPlayer.Idled:Connect(function()
+    if Flags.AntiAFK then
+        VirtualUser:CaptureController()
+        VirtualUser:ClickButton2(Vector2.new())
+    end
+end)
+
+-- Constructor de la Ventana Principal
+function MuscleLib:CreateWindow(titleText)
+    -- Eliminar GUI previa si existe
+    if game.CoreGui:FindFirstChild("MuscleLegendsLib") then
+        game.CoreGui.MuscleLegendsLib:Destroy()
+    end
+
+    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = "MuscleLegendsLib"
+    ScreenGui.Parent = game.CoreGui
+    ScreenGui.ResetOnSpawn = false
+
+    local MainFrame = Instance.new("Frame")
+    MainFrame.Name = "MainFrame"
+    MainFrame.Size = UDim2.new(0, 480, 0, 320)
+    MainFrame.Position = UDim2.new(0.5, -240, 0.5, -160)
+    MainFrame.BackgroundColor3 = Color3.fromRGB(22, 22, 26)
+    MainFrame.BorderSizePixel = 0
+    MainFrame.Active = true
+    MainFrame.Draggable = true -- Permite arrastrar la ventana
+    MainFrame.Parent = ScreenGui
+
+    local UICorner = Instance.new("UICorner")
+    UICorner.CornerRadius = UDim.new(0, 8)
+    UICorner.Parent = MainFrame
+
+    -- Barra Superior
+    local TopBar = Instance.new("Frame")
+    TopBar.Size = UDim2.new(1, 0, 0, 36)
+    TopBar.BackgroundColor3 = Color3.fromRGB(30, 30, 36)
+    TopBar.BorderSizePixel = 0
+    TopBar.Parent = MainFrame
+
+    local TopCorner = Instance.new("UICorner")
+    TopCorner.CornerRadius = UDim.new(0, 8)
+    TopCorner.Parent = TopBar
+
+    local Title = Instance.new("TextLabel")
+    Title.Size = UDim2.new(1, -40, 1, 0)
+    Title.Position = UDim2.new(0, 12, 0, 0)
+    Title.BackgroundTransparency = 1
+    Title.Text = titleText or "Muscle Legends Hub"
+    Title.TextColor3 = Color3.fromRGB(255, 85, 85)
+    Title.Font = Enum.Font.GothamBold
+    Title.TextSize = 15
+    Title.TextXAlignment = Enum.TextXAlignment.Left
+    Title.Parent = TopBar
+
+    -- Botón Minimizar / Cerrar
+    local CloseBtn = Instance.new("TextButton")
+    CloseBtn.Size = UDim2.new(0, 30, 0, 30)
+    CloseBtn.Position = UDim2.new(1, -33, 0, 3)
+    CloseBtn.BackgroundTransparency = 1
+    CloseBtn.Text = "X"
+    CloseBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+    CloseBtn.Font = Enum.Font.GothamBold
+    CloseBtn.TextSize = 14
+    CloseBtn.Parent = TopBar
+    CloseBtn.MouseButton1Click:Connect(function()
+        ScreenGui:Destroy()
+    end)
+
+    -- Contenedor de Pestañas (Izquierda)
+    local TabContainer = Instance.new("Frame")
+    TabContainer.Size = UDim2.new(0, 130, 1, -46)
+    TabContainer.Position = UDim2.new(0, 8, 0, 42)
+    TabContainer.BackgroundColor3 = Color3.fromRGB(26, 26, 31)
+    TabContainer.BorderSizePixel = 0
+    TabContainer.Parent = MainFrame
+
+    local TabCorner = Instance.new("UICorner")
+    TabCorner.CornerRadius = UDim.new(0, 6)
+    TabCorner.Parent = TabContainer
+
+    local TabLayout = Instance.new("UIListLayout")
+    TabLayout.Padding = UDim.new(0, 5)
+    TabLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    TabLayout.Parent = TabContainer
+
+    local TabPadding = Instance.new("UIPadding")
+    TabPadding.PaddingTop = UDim.new(0, 8)
+    TabPadding.Parent = TabContainer
+
+    -- Contenedor de Elementos (Derecha)
+    local PagesFolder = Instance.new("Folder")
+    PagesFolder.Name = "Pages"
+    PagesFolder.Parent = MainFrame
+
+    local WindowObj = {}
+    local FirstTab = true
+
+    function WindowObj:CreateTab(tabName)
+        local TabBtn = Instance.new("TextButton")
+        TabBtn.Size = UDim2.new(0.9, 0, 0, 30)
+        TabBtn.BackgroundColor3 = FirstTab and Color3.fromRGB(255, 85, 85) or Color3.fromRGB(35, 35, 42)
+        TabBtn.Text = tabName
+        TabBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        TabBtn.Font = Enum.Font.GothamSemibold
+        TabBtn.TextSize = 13
+        TabBtn.Parent = TabContainer
+
+        local BtnCorner = Instance.new("UICorner")
+        BtnCorner.CornerRadius = UDim.new(0, 5)
+        BtnCorner.Parent = TabBtn
+
+        local Page = Instance.new("ScrollingFrame")
+        Page.Name = tabName
+        Page.Size = UDim2.new(1, -152, 1, -46)
+        Page.Position = UDim2.new(0, 144, 0, 42)
+        Page.BackgroundColor3 = Color3.fromRGB(26, 26, 31)
+        Page.BorderSizePixel = 0
+        Page.ScrollBarThickness = 3
+        Page.Visible = FirstTab
+        Page.Parent = PagesFolder
+
+        local PageCorner = Instance.new("UICorner")
+        PageCorner.CornerRadius = UDim.new(0, 6)
+        PageCorner.Parent = Page
+
+        local PageLayout = Instance.new("UIListLayout")
+        PageLayout.Padding = UDim.new(0, 6)
+        PageLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+        PageLayout.Parent = Page
+
+        local PagePadding = Instance.new("UIPadding")
+        PagePadding.PaddingTop = UDim.new(0, 8)
+        PagePadding.Parent = Page
+
+        FirstTab = false
+
+        TabBtn.MouseButton1Click:Connect(function()
+            for _, p in pairs(PagesFolder:GetChildren()) do
+                p.Visible = false
+            end
+            for _, b in pairs(TabContainer:GetChildren()) do
+                if b:IsA("TextButton") then
+                    b.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
+                end
+            end
+            Page.Visible = true
+            TabBtn.BackgroundColor3 = Color3.fromRGB(255, 85, 85)
+        end)
+
+        local Elements = {}
+
+        -- Componente: Toggle (Interruptor)
+        function Elements:CreateToggle(text, default, callback)
+            local state = default or false
+            local ToggleBtn = Instance.new("TextButton")
+            ToggleBtn.Size = UDim2.new(0.94, 0, 0, 34)
+            ToggleBtn.BackgroundColor3 = Color3.fromRGB(34, 34, 40)
+            ToggleBtn.Text = "  " .. text .. (state and " [ON]" or " [OFF]")
+            ToggleBtn.TextColor3 = state and Color3.fromRGB(100, 255, 130) or Color3.fromRGB(220, 220, 220)
+            ToggleBtn.Font = Enum.Font.Gotham
+            ToggleBtn.TextSize = 13
+            ToggleBtn.TextXAlignment = Enum.TextXAlignment.Left
+            ToggleBtn.Parent = Page
+
+            local TCorner = Instance.new("UICorner")
+            TCorner.CornerRadius = UDim.new(0, 5)
+            TCorner.Parent = ToggleBtn
+
+            ToggleBtn.MouseButton1Click:Connect(function()
+                state = not state
+                ToggleBtn.Text = "  " .. text .. (state and " [ON]" or " [OFF]")
+                ToggleBtn.TextColor3 = state and Color3.fromRGB(100, 255, 130) or Color3.fromRGB(220, 220, 220)
+                callback(state)
+            end)
+        end
+
+        -- Componente: Button (Botón de acción única)
+        function Elements:CreateButton(text, callback)
+            local Btn = Instance.new("TextButton")
+            Btn.Size = UDim2.new(0.94, 0, 0, 34)
+            Btn.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
+            Btn.Text = text
+            Btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+            Btn.Font = Enum.Font.GothamSemibold
+            Btn.TextSize = 13
+            Btn.Parent = Page
+
+            local BCorner = Instance.new("UICorner")
+            BCorner.CornerRadius = UDim.new(0, 5)
+            BCorner.Parent = Btn
+
+            Btn.MouseButton1Click:Connect(function()
+                callback()
+            end)
+        end
+
+        return Elements
+    end
+
+    return WindowObj
+end
+
+--------------------------------------------------------------------------------
+-- LÓGICA ESPECÍFICA DE MUSCLE LEGENDS
+--------------------------------------------------------------------------------
+
+local Window = MuscleLib:CreateWindow("Muscle Legends | Custom Lib")
+
+-- Pestaña 1: Auto Farm
+local FarmTab = Window:CreateTab("Auto Farm")
+
+FarmTab:CreateToggle("Auto Fuerza (Equipar Pesa)", false, function(val)
+    Flags.AutoStrength = val
+    task.spawn(function()
+        while Flags.AutoStrength do
+            -- Equipa la herramienta de pesa en el inventario y activa el evento
+            for _, tool in pairs(LocalPlayer.Backpack:GetChildren()) do
+                if tool:IsA("Tool") and (tool.Name:find("Weight") or tool.Name:find("Pushups") or tool.Name:find("Situps")) then
+                    tool.Parent = LocalPlayer.Character
+                end
+            end
+            LocalPlayer.muscleEvent:FireServer("rep")
+            task.wait(0.1)
+        end
+    end)
+end)
+
+FarmTab:CreateToggle("Auto Rebirth", false, function(val)
+    Flags.AutoRebirth = val
+    task.spawn(function()
+        while Flags.AutoRebirth do
+            ReplicatedStorage.rEvents.rebirthRemote:InvokeServer("rebirthRequest")
+            task.wait(1)
+        end
+    end)
+end)
+
+FarmTab:CreateToggle("Anti-AFK", true, function(val)
+    Flags.AntiAFK = val
+end)
+
+-- Pestaña 2: Teleports (Gimnasios)
+local TeleportTab = Window:CreateTab("Gimnasios")
+
+local Gyms = {
+    ["Spawn / Playa"] = CFrame.new(-38, 7, 211),
+    ["Frost Gym (1 Rebirth)"] = CFrame.new(-2623, 7, -409),
+    ["Mythical Gym (5 Rebirths)"] = CFrame.new(2250, 7, 1073),
+    ["Eternal Gym (15 Rebirths)"] = CFrame.new(-6758, 7, -1284),
+    ["Legends Gym (30 Rebirths)"] = CFrame.new(4603, 987, -3897),
+    ["Muscle King Gym"] = CFrame.new(-8625, 17, -5730)
+}
+
+for gymName, cframePos in pairs(Gyms) do
+    TeleportTab:CreateButton("TP: " .. gymName, function()
+        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            LocalPlayer.Character.HumanoidRootPart.CFrame = cframePos
+        end
+    end)
+end
+
+-- Pestaña 3: Jugador
+local PlayerTab = Window:CreateTab("Jugador")
+
+PlayerTab:CreateButton("Velocidad Rápida (100)", function()
+    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+        LocalPlayer.Character.Humanoid.WalkSpeed = 100
+    end
+end)
+
+PlayerTab:CreateButton("Velocidad Normal (16)", function()
+    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+        LocalPlayer.Character.Humanoid.WalkSpeed = 16
+    end
+end)
+
+PlayerTab:CreateButton("Reclamar Todos los Cofres", function()
+    local chests = {"Magma Chest", "Mythical Chest", "Golden Chest", "Enchanted Chest", "Legends Chest"}
+    for _, chestName in pairs(chests) do
+        ReplicatedStorage.rEvents.checkChestRemote:InvokeServer(chestName)
+        task.wait(0.2)
+    end
+end)
+
+return MuscleLib
