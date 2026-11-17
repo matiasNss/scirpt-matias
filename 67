@@ -1,5 +1,7 @@
 
-local library = https://raw.githubusercontent.com/matiasNss/scirpt-matias/refs/heads/main/librerialocal player = game.Players.LocalPlayer
+local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/matiasNss/scirpt-matias/refs/heads/main/libreria"))()
+
+local player = game.Players.LocalPlayer
 local displayName = player.DisplayName or player.Name
 
 local window = library:AddWindow("Mxtias hub 777  | - Hola crack " .. displayName, {
@@ -1344,5 +1346,4 @@ task.spawn(function()
         task.wait(0.05)
     end
 end)
-
 
