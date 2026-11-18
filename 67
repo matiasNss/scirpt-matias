@@ -1,4 +1,4 @@
-local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/matiasNss/scirpt-matias/refs/heads/main/libreria"))()
+local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/matiasNss/scirpt-matias/refs/heads/main/67"))()
 
 local player = game.Players.LocalPlayer
 local displayName = player.DisplayName or player.Name
@@ -453,9 +453,9 @@ AutoFarm:AddButton("Equip Swift Samurai", function()
             end
         end
     end
-    task.wait(0.1)
+    task.wait(0.5)
 
-    -- Ahora equipamos máximo 8 "Swift Samurai"
+    -- Ahora equipamos máximo 8 "Swift Samurai" con task.wait(0.5)
     local equipped = 0
     local maxEquip = 8
     for _, folder in pairs(petsFolder:GetChildren()) do
@@ -465,6 +465,7 @@ AutoFarm:AddButton("Equip Swift Samurai", function()
                     ReplicatedStorage.rEvents.equipPetEvent:FireServer("equipPet", pet)
                     equipped += 1
                     print("Equipado Swift Samurai #" .. equipped)
+                    task.wait(0.5)
 
                     if equipped >= maxEquip then
                         return -- salir cuando ya haya 8 equipados
