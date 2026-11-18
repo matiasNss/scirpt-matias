@@ -22,7 +22,7 @@ end
 
 if not isAllowed then
     warn("Acceso denegado, este Script es de compra.")
-    LocalPlayer:Kick("No tienes permiso para ejecutar este Script.")
+    LocalPlayer:Kick("No tienes acceso gay.")
     return
 end
 
